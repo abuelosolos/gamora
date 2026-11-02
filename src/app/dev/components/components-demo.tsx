@@ -4,20 +4,15 @@
 
 import * as React from "react"
 import {
-  CaretLeft,
-  ChatCircle,
-  DotsThreeVertical,
   ImagesSquare,
   MagnifyingGlass,
   SealCheck,
-  SlidersHorizontal,
-  X,
 } from "@/components/icons"
 import { BottomNav } from "@/components/layout/bottom-nav"
-import { TopBar, TopBarButton } from "@/components/layout/top-bar"
+import { PostButton } from "@/components/layout/post-button"
+import { TopNavbar } from "@/components/layout/top-navbar"
 import { ComingSoon } from "@/components/shared/coming-soon"
 import { EmptyState } from "@/components/shared/empty-state"
-import { Logo } from "@/components/shared/logo"
 import { useTheme } from "@/components/shared/theme-provider"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -207,86 +202,33 @@ function ThemeSample({ theme }: { theme: Theme }) {
         </div>
       </Group>
 
-      <Group title="Top bar (Home, Activity, Profile, Post, Jobs)">
+      <Group title="Top Navbar (Home, Activity, Profile, Post, Jobs, Settings)">
         <div className="flex flex-col gap-2 overflow-hidden rounded-ui-md border border-borderDefault">
-          <TopBar
-            className="static"
-            leading={<Logo title="Gamora" />}
-            trailing={
-              <>
-                <TopBarButton label="Search">
-                  <MagnifyingGlass aria-hidden="true" />
-                </TopBarButton>
-                <TopBarButton label="Messages">
-                  <ChatCircle aria-hidden="true" />
-                </TopBarButton>
-                <Avatar name="Ada Lovelace" size="sm" />
-              </>
-            }
-          />
-          <TopBar
-            className="static"
-            title="Activity"
-            trailing={
-              <TopBarButton label="Search">
-                <MagnifyingGlass aria-hidden="true" />
-              </TopBarButton>
-            }
-          />
-          <TopBar
-            className="static"
-            leading={
-              <TopBarButton label="Back">
-                <CaretLeft aria-hidden="true" />
-              </TopBarButton>
-            }
-            trailing={
-              <>
-                <TopBarButton label="Search">
-                  <MagnifyingGlass aria-hidden="true" />
-                </TopBarButton>
-                <TopBarButton label="More options">
-                  <DotsThreeVertical aria-hidden="true" />
-                </TopBarButton>
-              </>
-            }
-          />
-          <TopBar
-            className="static"
-            leading={
-              <TopBarButton label="Close">
-                <X aria-hidden="true" />
-              </TopBarButton>
-            }
-            trailing={
-              <>
-                <Chip variant="outline">Drafts</Chip>
-                <Chip selected>Posts</Chip>
-              </>
-            }
-          />
-          <TopBar
-            className="static"
-            title="Jobs"
-            trailing={
-              <>
-                <TopBarButton label="Search">
-                  <MagnifyingGlass aria-hidden="true" />
-                </TopBarButton>
-                <TopBarButton label="Filters">
-                  <SlidersHorizontal aria-hidden="true" />
-                </TopBarButton>
-              </>
-            }
-          />
+          <TopNavbar className="static" variant="home" viewer={{ name: "Ada Lovelace", username: "ada", avatarUrl: null }} />
+          <TopNavbar className="static" variant="activity" viewer={{ name: "Ada Lovelace", username: "ada", avatarUrl: null }} />
+          <TopNavbar className="static" variant="home" viewer={null} />
+          <TopNavbar className="static" variant="profile" backHref="/feed" />
+          <TopNavbar className="static" variant="post" closeHref="/feed" formId="demo" />
+          <TopNavbar className="static" variant="jobs" />
+          <TopNavbar className="static" variant="settings" backHref="/feed" formId="demo" />
+          <TopNavbar className="static" variant="settings" backHref="/feed" formId="demo" title={LONG_NAME} />
         </div>
       </Group>
 
-      <Group title="Bottom nav (Home active, Jobs active, Shop active)">
-        <div className="flex flex-col gap-6 rounded-ui-md border border-borderDefault bg-bgSurface py-6">
-          <BottomNav className="static" activeHref="/feed" />
-          <BottomNav className="static" activeHref="/jobs" />
-          <BottomNav className="static" activeHref="/unavailable/shop" />
+      <Group title="Bottom nav (icons only: Home, Jobs, Activity, Profile active; labels variant)">
+        <div className="flex flex-col gap-6 rounded-ui-md border border-borderDefault bg-bgDefault px-1 py-6">
+          <BottomNav activeHref="/feed" />
+          <BottomNav activeHref="/jobs" />
+          <BottomNav activeHref="/activity" />
+          <BottomNav activeHref="/u/ada" />
+          <BottomNav activeHref="/feed" showLabels />
+        </div>
+      </Group>
+
+      <Group title="Post button (outside the nav, above it on Home)">
+        <div className="flex flex-col items-end gap-3.75 rounded-ui-md border border-borderDefault bg-bgDefault px-1 py-6">
+          <PostButton className="mr-5.5" />
+          <BottomNav className="w-full" activeHref="/feed" />
         </div>
       </Group>
     </section>
