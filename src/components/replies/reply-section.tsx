@@ -131,6 +131,7 @@ function ReplySection({ postId, initial, initialCount, viewer }: ReplySectionPro
               <li key={reply.id} id={`reply-${reply.id}`} aria-busy={reply.id.startsWith("pending-")}>
                 <PostCard
                   post={reply}
+                  isReply
                   onDeleted={() => {
                     setItems((current) => current.filter((item) => item.id !== reply.id))
                     setCount((current) => Math.max(0, current - 1))

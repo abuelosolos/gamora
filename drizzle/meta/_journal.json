@@ -36,6 +36,20 @@
       "when": 1793659926169,
       "tag": "0004_phase_7_replies",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793660657213,
+      "tag": "0005_phase_8_jobs",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793662111272,
+      "tag": "0006_phase_9_reports",
+      "breakpoints": true
     }
   ]
 }

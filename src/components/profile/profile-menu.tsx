@@ -5,28 +5,32 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { DotsThreeVertical, GearSix, Info, PaintBrush, SignOut } from "@/components/icons"
 import { TopBarButton } from "@/components/layout/top-bar"
+import { ReportSheet } from "@/components/report/report-sheet"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/toast"
 import { authClient } from "@/lib/auth-client"
 
 /**
  * Figma: the Dropdown on the profile's three-dot button. Your own profile:
- * Settings, Themes, Wallet (all Coming soon) and Log-out (works). Another
- * artist's profile: Report (Coming soon). Signed out: the menu is not shown.
+ * Settings and Appearance (real screens), Wallet (Coming soon) and Log-out (works).
+ * Another artist's profile: Report (opens the report sheet). Signed out: the menu is not shown.
  *
  * Deviations: Wallet uses the Info icon, as the design does. Report has no icon
  * because the icon set has no Flag yet.
  */
 export interface ProfileMenuProps {
   isOwner: boolean
+  /** The profile being viewed. Names the report target. */
+  username: string
 }
 
 const itemClass = "min-h-11 px-3 text-body-sm"
 
-function ProfileMenu({ isOwner }: ProfileMenuProps) {
+function ProfileMenu({ isOwner, username }: ProfileMenuProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [signingOut, setSigningOut] = React.useState(false)
+  const [reporting, setReporting] = React.useState(false)
 
   async function logOut() {
     if (signingOut) return
@@ -43,7 +47,8 @@ function ProfileMenu({ isOwner }: ProfileMenuProps) {
   }
 
   return (
-    <DropdownMenu>
+    <>
+      <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <TopBarButton label="More options">
           <DotsThreeVertical aria-hidden="true" />
@@ -53,15 +58,15 @@ function ProfileMenu({ isOwner }: ProfileMenuProps) {
         {isOwner ? (
           <>
             <DropdownMenuItem asChild className={itemClass}>
-              <Link href="/unavailable/settings">
+              <Link href="/settings">
                 <GearSix aria-hidden="true" />
                 Settings
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild className={itemClass}>
-              <Link href="/unavailable/themes">
+              <Link href="/settings/appearance">
                 <PaintBrush aria-hidden="true" />
-                Themes
+                Appearance
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild className={itemClass}>
@@ -76,12 +81,17 @@ function ProfileMenu({ isOwner }: ProfileMenuProps) {
             </DropdownMenuItem>
           </>
         ) : (
-          <DropdownMenuItem asChild className={itemClass}>
-            <Link href="/unavailable/report">Report</Link>
+          // TODO(icon): Flag is not in src/components/icons yet, so Report has no icon.
+          <DropdownMenuItem className={itemClass} onSelect={() => setReporting(true)}>
+            Report
           </DropdownMenuItem>
         )}
       </DropdownMenuContent>
-    </DropdownMenu>
+      </DropdownMenu>
+      {isOwner ? null : (
+        <ReportSheet open={reporting} onOpenChange={setReporting} target={{ type: "profile", username }} noun="profile" />
+      )}
+    </>
   )
 }
 

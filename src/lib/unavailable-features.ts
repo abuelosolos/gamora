@@ -5,11 +5,11 @@
  */
 export const UNAVAILABLE_FEATURES = {
   chat: { name: "Messages" },
-  settings: { name: "Settings" },
-  themes: { name: "Themes" },
   wallet: { name: "Wallet" },
-  report: { name: "Reporting" },
   subscriptions: { name: "Subscriptions", description: "Subscribing to artists to see their subscriber-only posts is on the way." },
+  hirer: { name: "Hirer tools", description: "Posting jobs and reviewing applicants are only open to hirers, and hirer accounts are on the way." },
+  shop: { name: "Shop" },
+  stats: { name: "Stats", description: "Stats for your posts and profile are on the way." },
 } as const satisfies Record<string, { name: string; description?: string }>
 
 export type UnavailableFeature = keyof typeof UNAVAILABLE_FEATURES
