@@ -12,7 +12,7 @@ import { TopBar, TopBarButton } from "@/components/layout/top-bar"
 import { Logo } from "@/components/shared/logo"
 import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Chip } from "@/components/ui/chip"
+import { Chip, chipVariants } from "@/components/ui/chip"
 import { Skeleton } from "@/components/ui/skeleton"
 
 /**
@@ -24,7 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton"
  *   jobs      "Jobs"                  | Search, Filters
  *   profile   Back                    | Search, More
  *   post      Close                   | Drafts, Post
- *   settings  Back + "Edit profile"   | Save
+ *   settings  Back + "Edit profile"   | Save (greyed out while there is nothing to save: canSave=false)
  *
  * Search arrives in Phase 6 and chat is not available, so search is disabled
  * and chat goes to the Coming soon screen. Pass a slot (`filters`, `more`) to
@@ -40,8 +40,8 @@ export type TopNavbarProps = { className?: string } & (
   | { variant: "home" | "activity"; viewer: TopNavbarViewer | null }
   | { variant: "jobs"; filters?: React.ReactNode }
   | { variant: "profile"; backHref: string; more?: React.ReactNode }
-  | { variant: "post"; closeHref: string; formId: string; submitting?: boolean }
-  | { variant: "settings"; backHref: string; formId: string; saving?: boolean; title?: string }
+  | { variant: "post"; closeHref: string; formId: string; submitting?: boolean; canPost?: boolean }
+  | { variant: "settings"; backHref: string; formId: string; saving?: boolean; canSave?: boolean; title?: string }
 )
 
 function SearchButton() {
@@ -177,9 +177,15 @@ function TopNavbar(props: TopNavbarProps) {
               <Chip disabled aria-label="Drafts, coming soon" className="border-transparent">
                 Drafts
               </Chip>
-              <Button type="submit" form={props.formId} size="xs" loading={props.submitting} className="min-w-12.5">
+              {/* Figma Pills: 28px accent pill, caption text; grey until there is something to post. */}
+              <button
+                type="submit"
+                form={props.formId}
+                disabled={props.submitting || props.canPost === false}
+                className={chipVariants({ variant: "selected", className: "disabled:border-bgSurface disabled:bg-bgSurface" })}
+              >
                 Post
-              </Button>
+              </button>
             </>
           }
         />
@@ -196,7 +202,15 @@ function TopNavbar(props: TopNavbarProps) {
             </>
           }
           trailing={
-            <Button type="submit" form={props.formId} variant="ghost" size="xs" loading={props.saving}>
+            <Button
+              type="submit"
+              form={props.formId}
+              variant="ghost"
+              size="xs"
+              loading={props.saving}
+              disabled={props.canSave === false}
+              className={props.canSave === false ? undefined : "text-textPrimary"}
+            >
               Save
             </Button>
           }

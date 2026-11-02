@@ -8,7 +8,7 @@ import type { ActivityFilter } from "@/server/validators/interactions"
  * is a link, so the filter lives in the URL (?filter=likes) and survives a reload.
  *
  * Deviation: "Mentions" is shown but disabled. Nobody can mention anyone yet,
- * so it would always be empty. "Replies" lists comments on your posts.
+ * so it would always be empty. "Replies" lists replies to your posts.
  */
 const FILTERS: { value: ActivityFilter; label: string; href: string }[] = [
   { value: "all", label: "All", href: "/activity" },

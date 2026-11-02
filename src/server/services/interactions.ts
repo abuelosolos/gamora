@@ -1,9 +1,9 @@
 import "server-only"
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, isNotNull, sql } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 import { db } from "@/server/db"
 import {
   bookmarks,
-  comments,
   follows,
   likes,
   notifications,
@@ -13,15 +13,15 @@ import {
   reposts,
   user,
 } from "@/server/db/schema"
-import { decodeCursor, encodeCursor } from "@/server/services/posts"
+import { attachImages, decodeCursor, encodeCursor, postColumns, type PostView } from "@/server/services/posts"
 import {
   ACTIVITY_PAGE_SIZE,
-  COMMENTS_PAGE_SIZE,
+  REPLIES_PAGE_SIZE,
   type ActivityFilter,
 } from "@/server/validators/interactions"
 
 /**
- * Likes, bookmarks, reposts, follows, comments and notifications.
+ * Likes, bookmarks, reposts, follows, replies (posts with a parent) and notifications.
  *
  * Rules every function here follows:
  *  - The acting user always comes from the session (the caller passes it in).
@@ -40,17 +40,22 @@ const flagTables = { like: likes, bookmark: bookmarks, repost: reposts } as cons
 
 export interface PostCounts {
   likeCount: number
-  commentCount: number
+  replyCount: number
   repostCount: number
 }
 
 export async function getPostCounts(postId: string): Promise<PostCounts> {
-  const one = async (table: typeof likes | typeof reposts | typeof comments) => {
+  const one = async (table: typeof likes | typeof reposts) => {
     const [row] = await db.select({ n: count() }).from(table).where(eq(table.postId, postId))
     return row?.n ?? 0
   }
-  const [likeCount, commentCount, repostCount] = await Promise.all([one(likes), one(comments), one(reposts)])
-  return { likeCount, commentCount, repostCount }
+  const [likeCount, replyCount, repostCount] = await Promise.all([one(likes), countReplies(postId), one(reposts)])
+  return { likeCount, replyCount, repostCount }
+}
+
+async function countReplies(postId: string): Promise<number> {
+  const [row] = await db.select({ n: count() }).from(posts).where(eq(posts.parentId, postId))
+  return row?.n ?? 0
 }
 
 async function authorOf(postId: string): Promise<string | null> {
@@ -139,145 +144,91 @@ export async function setFollow(followerId: string, username: string, on: boolea
   return { found: true, self: false, on, followerCount: row?.n ?? 0 }
 }
 
-// ---------- Comments ----------
+// ---------- Replies ----------
 
-export interface CommentView {
-  id: string
-  body: string
-  createdAt: string
-  author: { name: string; username: string; avatarUrl: string | null }
-  /** True when the signed-in viewer wrote it. Decided here, never by the client. */
-  isOwner: boolean
-  /** Whether the viewer follows the comment's author (drives the menu label). */
-  followsAuthor: boolean
-}
-
-export interface CommentsPage {
-  items: CommentView[]
+export interface RepliesPage {
+  items: PostView[]
   nextCursor: string | null
 }
 
-/** The comment and its notification are written in one atomic batch. */
-export async function createComment(
+/** The reply (a post with a parent) and its notification are written in one atomic batch. */
+export async function createReply(
   userId: string,
   postId: string,
   body: string
-): Promise<{ found: false } | { found: true; comment: CommentView; commentCount: number }> {
+): Promise<{ found: false } | { found: true; reply: PostView; replyCount: number }> {
   const authorId = await authorOf(postId)
   if (!authorId) return { found: false }
 
   const id = crypto.randomUUID()
-  const insertComment = db.insert(comments).values({ id, postId, authorId: userId, body })
+  const insertReply = db.insert(posts).values({ id, authorId: userId, body, parentId: postId })
   if (authorId !== userId) {
     await db.batch([
-      insertComment,
-      db.insert(notifications).values({ recipientId: authorId, actorId: userId, type: "comment", postId, commentId: id }),
+      insertReply,
+      db.insert(notifications).values({ recipientId: authorId, actorId: userId, type: "comment", postId, replyId: id }),
     ])
   } else {
-    await insertComment
+    await insertReply
   }
 
-  const [row] = await db
-    .select({
-      id: comments.id,
-      body: comments.body,
-      createdAt: comments.createdAt,
-      name: user.name,
-      username: profile.username,
-      avatarUrl: profile.avatarUrl,
-    })
-    .from(comments)
-    .innerJoin(user, eq(user.id, comments.authorId))
-    .innerJoin(profile, eq(profile.userId, comments.authorId))
-    .where(eq(comments.id, id))
+  const rows = await db
+    .select(postColumns)
+    .from(posts)
+    .innerJoin(user, eq(user.id, posts.authorId))
+    .innerJoin(profile, eq(profile.userId, posts.authorId))
+    .where(eq(posts.id, id))
     .limit(1)
-  if (!row) throw new Error("comment missing after insert")
+  const [reply] = await attachImages(rows, userId)
+  if (!reply) throw new Error("reply missing after insert")
 
-  const [total] = await db.select({ n: count() }).from(comments).where(eq(comments.postId, postId))
-  return {
-    found: true,
-    comment: {
-      id: row.id,
-      body: row.body,
-      createdAt: row.createdAt.toISOString(),
-      author: { name: row.name, username: row.username, avatarUrl: row.avatarUrl },
-      isOwner: true,
-      followsAuthor: false,
-    },
-    commentCount: total?.n ?? 0,
-  }
+  return { found: true, reply, replyCount: await countReplies(postId) }
 }
 
 /**
  * Layer 4: the author is part of the WHERE clause. Zero rows means "not found
- * or not yours", and the caller answers both the same way. The comment's
- * notification goes with it (ON DELETE CASCADE on notifications.comment_id).
+ * or not yours", and the caller answers both the same way. Only replies can be
+ * removed here (parent_id is set), and the notification goes with it
+ * (ON DELETE CASCADE on notifications.comment_id).
  */
-export async function deleteOwnComment(
-  commentId: string,
+export async function deleteOwnReply(
+  replyId: string,
   userId: string
-): Promise<{ deleted: false } | { deleted: true; commentCount: number }> {
+): Promise<{ deleted: false } | { deleted: true; replyCount: number }> {
   const removed = await db
-    .delete(comments)
-    .where(and(eq(comments.id, commentId), eq(comments.authorId, userId)))
-    .returning({ postId: comments.postId })
-  const postId = removed[0]?.postId
-  if (!postId) return { deleted: false }
-  const [total] = await db.select({ n: count() }).from(comments).where(eq(comments.postId, postId))
-  return { deleted: true, commentCount: total?.n ?? 0 }
+    .delete(posts)
+    .where(and(eq(posts.id, replyId), eq(posts.authorId, userId), isNotNull(posts.parentId)))
+    .returning({ parentId: posts.parentId })
+  const parentId = removed[0]?.parentId
+  if (!parentId) return { deleted: false }
+  return { deleted: true, replyCount: await countReplies(parentId) }
 }
 
 /** Oldest first, keyset on (created_at, id). */
-export async function listComments(params: {
+export async function listReplies(params: {
   postId: string
   cursor: string | null
   viewerId: string | null
-}): Promise<CommentsPage> {
+}): Promise<RepliesPage> {
   const decoded = params.cursor ? decodeCursor(params.cursor) : null
   const after = decoded
-    ? sql`(${comments.createdAt}, ${comments.id}) > (${decoded.createdAt}::timestamp, ${decoded.id})`
+    ? sql`(${posts.createdAt}, ${posts.id}) > (${decoded.createdAt}::timestamp, ${decoded.id})`
     : undefined
 
   const rows = await db
-    .select({
-      id: comments.id,
-      body: comments.body,
-      createdAt: comments.createdAt,
-      createdAtText: sql<string>`${comments.createdAt}::text`,
-      authorId: comments.authorId,
-      name: user.name,
-      username: profile.username,
-      avatarUrl: profile.avatarUrl,
-    })
-    .from(comments)
-    .innerJoin(user, eq(user.id, comments.authorId))
-    .innerJoin(profile, eq(profile.userId, comments.authorId))
-    .where(and(eq(comments.postId, params.postId), after))
-    .orderBy(asc(comments.createdAt), asc(comments.id))
-    .limit(COMMENTS_PAGE_SIZE + 1)
+    .select(postColumns)
+    .from(posts)
+    .innerJoin(user, eq(user.id, posts.authorId))
+    .innerJoin(profile, eq(profile.userId, posts.authorId))
+    .where(and(eq(posts.parentId, params.postId), after))
+    .orderBy(asc(posts.createdAt), asc(posts.id))
+    .limit(REPLIES_PAGE_SIZE + 1)
 
-  const hasMore = rows.length > COMMENTS_PAGE_SIZE
-  const page = hasMore ? rows.slice(0, COMMENTS_PAGE_SIZE) : rows
+  const hasMore = rows.length > REPLIES_PAGE_SIZE
+  const page = hasMore ? rows.slice(0, REPLIES_PAGE_SIZE) : rows
   const last = page.at(-1)
 
-  const followed = new Set<string>()
-  if (params.viewerId && page.length > 0) {
-    const mine = await db
-      .select({ id: follows.followingId })
-      .from(follows)
-      .where(and(eq(follows.followerId, params.viewerId), inArray(follows.followingId, [...new Set(page.map((row) => row.authorId))])))
-    for (const row of mine) followed.add(row.id)
-  }
-
   return {
-    items: page.map((row) => ({
-      id: row.id,
-      body: row.body,
-      createdAt: row.createdAt.toISOString(),
-      author: { name: row.name, username: row.username, avatarUrl: row.avatarUrl },
-      isOwner: params.viewerId !== null && params.viewerId === row.authorId,
-      followsAuthor: followed.has(row.authorId),
-    })),
+    items: await attachImages(page, params.viewerId),
     nextCursor: hasMore && last ? encodeCursor(last.createdAtText, last.id) : null,
   }
 }
@@ -292,8 +243,8 @@ export interface NotificationView {
   actor: { name: string; username: string; avatarUrl: string | null }
   /** The post the notification is about. Null for follows. */
   post: { id: string; body: string; imageUrl: string | null } | null
-  /** The text of the comment, for "commented on your post". */
-  commentBody: string | null
+  /** The text of the reply, for "replied to your post". */
+  replyBody: string | null
 }
 
 export interface ActivityPage {
@@ -302,6 +253,8 @@ export interface ActivityPage {
 }
 
 /** The viewer's own notifications, newest first. The recipient is always the viewer. */
+const replyPost = alias(posts, "reply_post")
+
 export async function listNotifications(params: {
   viewerId: string
   filter: ActivityFilter
@@ -331,14 +284,14 @@ export async function listNotifications(params: {
       postId: posts.id,
       postBody: posts.body,
       imageUrl: postImages.url,
-      commentBody: comments.body,
+      replyBody: replyPost.body,
     })
     .from(notifications)
     .innerJoin(user, eq(user.id, notifications.actorId))
     .innerJoin(profile, eq(profile.userId, notifications.actorId))
     .leftJoin(posts, eq(posts.id, notifications.postId))
     .leftJoin(postImages, and(eq(postImages.postId, posts.id), eq(postImages.position, 0)))
-    .leftJoin(comments, eq(comments.id, notifications.commentId))
+    .leftJoin(replyPost, eq(replyPost.id, notifications.replyId))
     .where(and(eq(notifications.recipientId, params.viewerId), byType, after))
     .orderBy(desc(notifications.createdAt), desc(notifications.id))
     .limit(ACTIVITY_PAGE_SIZE + 1)
@@ -355,7 +308,7 @@ export async function listNotifications(params: {
       unread: row.readAt === null,
       actor: { name: row.name, username: row.username, avatarUrl: row.avatarUrl },
       post: row.postId ? { id: row.postId, body: row.postBody ?? "", imageUrl: row.imageUrl } : null,
-      commentBody: row.commentBody,
+      replyBody: row.replyBody,
     })),
     nextCursor: hasMore && last ? encodeCursor(last.createdAtText, last.id) : null,
   }

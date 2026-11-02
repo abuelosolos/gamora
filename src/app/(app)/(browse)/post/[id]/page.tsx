@@ -1,18 +1,18 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { CommentSection, CommentSectionSkeleton } from "@/components/comments/comment-section"
+import { ReplySection, ReplySectionSkeleton } from "@/components/replies/reply-section"
 import { PostCard, PostCardSkeleton } from "@/components/feed/post-card"
 import { CaretLeft } from "@/components/icons"
 import { TopBar, TopBarButton } from "@/components/layout/top-bar"
 import { getUser } from "@/server/auth/session"
-import { listComments } from "@/server/services/interactions"
+import { listReplies } from "@/server/services/interactions"
 import { getPostById } from "@/server/services/posts"
 import { getProfileByUserId } from "@/server/services/profile"
 import { postIdSchema } from "@/server/validators/posts"
 
 // Public: readable signed out. There is no post-detail frame in Figma, so this
-// reuses the post card at full width (variant="detail") with the comments below.
+// reuses the post card at full width (variant="detail") with the replies below.
 export const metadata = { title: "Post" }
 
 export default function PostPage({ params }: PageProps<"/post/[id]">) {
@@ -32,7 +32,7 @@ export default function PostPage({ params }: PageProps<"/post/[id]">) {
         fallback={
           <div role="status" aria-label="Loading post">
             <PostCardSkeleton />
-            <CommentSectionSkeleton />
+            <ReplySectionSkeleton />
           </div>
         }
       >
@@ -48,9 +48,9 @@ async function PostContent({ params }: { params: PageProps<"/post/[id]">["params
   if (!parsed.success) notFound()
 
   const user = await getUser()
-  const [post, comments, profile] = await Promise.all([
+  const [post, replies, profile] = await Promise.all([
     getPostById(parsed.data, user?.id ?? null),
-    listComments({ postId: parsed.data, cursor: null, viewerId: user?.id ?? null }),
+    listReplies({ postId: parsed.data, cursor: null, viewerId: user?.id ?? null }),
     user ? getProfileByUserId(user.id) : null,
   ])
   if (!post) notFound()
@@ -58,10 +58,10 @@ async function PostContent({ params }: { params: PageProps<"/post/[id]">["params
   return (
     <>
       <PostCard post={post} variant="detail" />
-      <CommentSection
+      <ReplySection
         postId={post.id}
-        initial={comments}
-        initialCount={post.commentCount}
+        initial={replies}
+        initialCount={post.replyCount}
         viewer={user && profile ? { name: user.name, username: profile.username, avatarUrl: profile.avatarUrl } : null}
       />
     </>

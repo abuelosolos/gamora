@@ -14,7 +14,7 @@ const EMPTY: Record<ActivityFilter, { title: string; description: string }> = {
     description: "Likes, replies, reposts and new followers will show up here.",
   },
   likes: { title: "No likes yet", description: "When someone likes your art, you will see it here." },
-  replies: { title: "No replies yet", description: "Comments on your posts will show up here." },
+  replies: { title: "No replies yet", description: "Replies to your posts will show up here." },
 }
 
 /** One page from the server, then more by cursor when the reader asks. */

@@ -14,7 +14,7 @@ import type { NotificationView } from "@/server/services/interactions"
  * 149x101 thumbnail. The whole card opens the post, or the profile for follows.
  *
  * Deviations:
- *  - The heart, comment, repost and share row under each card is left out.
+ *  - The heart, reply, repost and share row under each card is left out.
  *    The card opens the post, where those actions live and are counted.
  *  - Icon colors come from status and accent tokens (like = statusError,
  *    reply = statusSuccess), not the raw colors in the design.
@@ -31,8 +31,8 @@ const TYPES = {
 function NotificationItem({ notification }: { notification: NotificationView }) {
   const { actor, post, type } = notification
   const { text, icon: Icon, tone } = TYPES[type]
-  const href = type === "follow" || !post ? `/u/${actor.username}` : `/post/${post.id}${type === "comment" ? "#comments" : ""}`
-  const preview = type === "comment" ? notification.commentBody : post?.body
+  const href = type === "follow" || !post ? `/u/${actor.username}` : `/post/${post.id}${type === "comment" ? "#replies" : ""}`
+  const preview = type === "comment" ? notification.replyBody : post?.body
 
   return (
     <li className="border-b border-borderDefault">

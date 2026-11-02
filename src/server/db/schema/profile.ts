@@ -2,6 +2,7 @@ import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  date,
   pgEnum,
   pgTable,
   text,
@@ -33,6 +34,15 @@ export const profile = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    /** Art categories the artist creates (up to 4). Shown in the profile head. Not the onboarding interests. */
+    categories: text("categories")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** "remote" or an ISO 3166-1 alpha-2 country code. Chosen from a list. */
+    location: text("location"),
+    /** Private: only the owner's edit screen reads it. Never part of the public profile. */
+    birthday: date("birthday", { mode: "string" }),
     isAdmin: boolean("is_admin").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
@@ -45,6 +55,8 @@ export const profile = pgTable(
     // Backstops for the Zod validators: 3 to 20 lowercase letters, digits, underscore.
     check("profile_username_format", sql`${table.username} ~ '^[a-z0-9_]{3,20}$'`),
     check("profile_bio_length", sql`char_length(${table.bio}) <= 160`),
+    check("profile_categories_max", sql`cardinality(${table.categories}) <= 4`),
+    check("profile_location_format", sql`${table.location} is null or ${table.location} ~ '^(remote|[A-Z]{2})$'`),
   ],
 );
 

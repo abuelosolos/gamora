@@ -18,13 +18,22 @@ export interface AvatarPickerProps {
   busy?: boolean
   error?: string | null
   onPick: (file: File) => void
+  /**
+   * Edit profile (Figma "Settings (Edit Profile)"): a 56px circle, no caption.
+   * The caller shows the busy and error messages itself, next to its own fields.
+   * With a picture set, a small camera badge marks it as changeable.
+   */
+  compact?: boolean
 }
 
-function AvatarPicker({ src, name, busy = false, error, onPick }: AvatarPickerProps) {
+function AvatarPicker({ src, name, busy = false, error, onPick, compact = false }: AvatarPickerProps) {
   const inputRef = React.useRef<HTMLInputElement>(null)
 
   return (
-    <div data-slot="avatar-picker" className="flex flex-1 flex-col items-center justify-center gap-4">
+    <div
+      data-slot="avatar-picker"
+      className={cn(compact ? "shrink-0" : "flex flex-1 flex-col items-center justify-center gap-4")}
+    >
       <input
         ref={inputRef}
         type="file"
@@ -44,27 +53,40 @@ function AvatarPicker({ src, name, busy = false, error, onPick }: AvatarPickerPr
         disabled={busy}
         aria-label={src ? "Change profile picture" : "Choose a profile picture"}
         className={cn(
-          "relative flex size-32 items-center justify-center overflow-hidden rounded-full bg-borderStrong text-textPrimary outline-none transition-opacity duration-200 focus-visible:ring-2 focus-visible:ring-accentDefault focus-visible:ring-offset-2 focus-visible:ring-offset-bgDefault",
+          "relative flex items-center justify-center rounded-full bg-borderStrong text-textPrimary outline-none transition-opacity duration-200 focus-visible:ring-2 focus-visible:ring-accentDefault focus-visible:ring-offset-2 focus-visible:ring-offset-bgDefault",
+          compact ? "size-14" : "size-32",
           busy && "opacity-60"
         )}
       >
         {src ? (
           <Avatar src={src} name={name} className="size-full border-0" />
         ) : (
-          <Camera className="size-12" aria-hidden="true" />
+          <Camera className={compact ? "size-7.5" : "size-12"} aria-hidden="true" />
         )}
+        {compact && src ? (
+          <span
+            aria-hidden="true"
+            className="absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full border border-borderStrong bg-bgElevated text-textPrimary"
+          >
+            <Camera className="size-4" />
+          </span>
+        ) : null}
       </button>
-      <p className="text-caption text-textSecondary">JPEG, PNG or WebP, up to 2 MB</p>
-      {busy ? (
-        <p role="status" className="text-caption text-textSecondary">
-          Uploading…
-        </p>
-      ) : null}
-      {error ? (
-        <p role="alert" className="text-caption text-statusError">
-          {error}
-        </p>
-      ) : null}
+      {compact ? null : (
+        <>
+          <p className="text-caption text-textSecondary">JPEG, PNG or WebP, up to 2 MB</p>
+          {busy ? (
+            <p role="status" className="text-caption text-textSecondary">
+              Uploading…
+            </p>
+          ) : null}
+          {error ? (
+            <p role="alert" className="text-caption text-statusError">
+              {error}
+            </p>
+          ) : null}
+        </>
+      )}
     </div>
   )
 }

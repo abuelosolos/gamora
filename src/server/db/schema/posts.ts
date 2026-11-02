@@ -1,5 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
+  boolean,
   check,
   index,
   integer,
@@ -21,6 +23,20 @@ export const posts = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     body: text("body").notNull().default(""),
+    /**
+     * Subscribers-only post. Everyone except the author sees it locked (blurred
+     * placeholder, no image URL). There are no subscriptions yet, so for now
+     * that means everyone but the author.
+     */
+    subscribersOnly: boolean("subscribers_only").notNull().default(false),
+    /**
+     * Set when this post is a reply: the post it answers. Replies are posts, so
+     * they have likes, reposts, bookmarks and counts like any other. They are
+     * left out of the feed and the profile's Posts tab.
+     */
+    parentId: text("parent_id").references((): AnyPgColumn => posts.id, {
+      onDelete: "cascade",
+    }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -32,6 +48,8 @@ export const posts = pgTable(
     index("posts_created_at_idx").on(table.createdAt.desc(), table.id.desc()),
     // A profile's posts, newest first.
     index("posts_author_idx").on(table.authorId, table.createdAt.desc()),
+    // A post's replies in order, with (created_at, id) as the cursor.
+    index("posts_parent_idx").on(table.parentId, table.createdAt, table.id),
     // Backstop for the Zod validator.
     check("posts_body_length", sql`char_length(${table.body}) <= 2000`),
   ],
@@ -51,12 +69,15 @@ export const postImages = pgTable(
     height: integer("height").notNull(),
     position: smallint("position").notNull(),
     altText: text("alt_text").notNull().default(""),
+    /** Tiny blurred WebP data URI, safe to show on a locked post. Null until set. */
+    blurData: text("blur_data"),
   },
   (table) => [
     index("post_images_post_idx").on(table.postId),
     uniqueIndex("post_images_post_position_unique").on(table.postId, table.position),
     check("post_images_position_range", sql`${table.position} between 0 and 3`),
     check("post_images_alt_length", sql`char_length(${table.altText}) <= 500`),
+    check("post_images_blur_length", sql`${table.blurData} is null or char_length(${table.blurData}) <= 2000`),
   ],
 );
 

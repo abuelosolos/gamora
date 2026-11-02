@@ -8,6 +8,7 @@ import {
   createPostWithImages,
   deleteOwnPost,
   listFeed,
+  listPostsByUsername,
   type FeedPage,
 } from "@/server/services/posts"
 import {
@@ -16,6 +17,7 @@ import {
   feedTabSchema,
   postIdSchema,
 } from "@/server/validators/posts"
+import { usernameSchema } from "@/server/validators/profile"
 
 export type CreatePostResult =
   | { ok: true; id: string }
@@ -137,6 +139,33 @@ export async function loadFeedPageAction(tab: unknown, cursor: unknown): Promise
     return { ok: true, page }
   } catch (error) {
     console.error("[loadFeed] failed", error instanceof Error ? error.message : "unknown")
+    return { ok: false, error: "server", message: "Could not load more posts." }
+  }
+}
+
+/** "Load more" on a profile. Public data, so signed-out visitors are limited by IP. */
+export async function loadProfilePostsAction(username: unknown, cursor: unknown): Promise<LoadFeedResult> {
+  const parsedName = usernameSchema.safeParse(username)
+  const parsedCursor = feedCursorSchema.safeParse(cursor ?? null)
+  if (!parsedName.success || !parsedCursor.success) {
+    return { ok: false, error: "invalid", message: "Could not load more posts." }
+  }
+
+  const viewer = await getUser()
+  const allowed = await withinRateLimits([
+    { name: "profile-posts:read", key: viewer?.id ?? (await clientIp()), limit: 120, windowSeconds: 10 * 60 },
+  ])
+  if (!allowed) return { ok: false, error: "rate_limited", message: "Slow down and try again soon." }
+
+  try {
+    const page = await listPostsByUsername({
+      username: parsedName.data,
+      cursor: parsedCursor.data,
+      viewerId: viewer?.id ?? null,
+    })
+    return { ok: true, page }
+  } catch (error) {
+    console.error("[loadProfilePosts] failed", error instanceof Error ? error.message : "unknown")
     return { ok: false, error: "server", message: "Could not load more posts." }
   }
 }

@@ -6,21 +6,24 @@ import { PostCard, PostCardSkeleton } from "@/components/feed/post-card"
 import { Plus } from "@/components/icons"
 import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
-import { loadFeedPageAction } from "@/server/actions/posts"
+import { loadFeedPageAction, loadProfilePostsAction } from "@/server/actions/posts"
 import type { FeedPage, PostView } from "@/server/services/posts"
 import type { FeedTab } from "@/server/validators/posts"
 
+/** Where the posts come from: a feed tab, or one artist's profile. */
+export type FeedSource = { kind: "feed"; tab: FeedTab } | { kind: "profile"; username: string; isOwner: boolean }
+
 export interface FeedListProps {
-  tab: FeedTab
+  source: FeedSource
   initial: FeedPage
 }
 
 /**
- * The posts of one feed tab. The first page comes from the server; the next
+ * The posts of one feed tab or one profile. The first page comes from the server; the next
  * pages load by cursor when the end of the list scrolls into view, or when the
  * reader presses the button after an error.
  */
-function FeedList({ tab, initial }: FeedListProps) {
+function FeedList({ source, initial }: FeedListProps) {
   const [items, setItems] = React.useState<PostView[]>(initial.items)
   const [cursor, setCursor] = React.useState<string | null>(initial.nextCursor)
   const [status, setStatus] = React.useState<"idle" | "loading" | "error">("idle")
@@ -32,7 +35,10 @@ function FeedList({ tab, initial }: FeedListProps) {
     if (busy.current || !cursor) return
     busy.current = true
     setStatus("loading")
-    const result = await loadFeedPageAction(tab, cursor)
+    const result =
+      source.kind === "feed"
+        ? await loadFeedPageAction(source.tab, cursor)
+        : await loadProfilePostsAction(source.username, cursor)
     if (result.ok) {
       setItems((current) => {
         const seen = new Set(current.map((post) => post.id))
@@ -45,7 +51,7 @@ function FeedList({ tab, initial }: FeedListProps) {
       setStatus("error")
     }
     busy.current = false
-  }, [cursor, tab])
+  }, [cursor, source])
 
   React.useEffect(() => {
     const node = sentinel.current
@@ -61,7 +67,25 @@ function FeedList({ tab, initial }: FeedListProps) {
   }, [cursor, status, loadMore])
 
   if (items.length === 0) {
-    return tab === "following" ? (
+    if (source.kind === "profile") {
+      return source.isOwner ? (
+        <EmptyState
+          title="You have not posted yet"
+          description="Share your first piece and it will show up here."
+          action={
+            <Button asChild>
+              <Link href="/create">
+                <Plus aria-hidden="true" />
+                Create post
+              </Link>
+            </Button>
+          }
+        />
+      ) : (
+        <EmptyState title="No posts yet" description="When this artist posts, you will see it here." />
+      )
+    }
+    return source.tab === "following" ? (
       <EmptyState
         title="Nothing from people you follow yet"
         description="Posts from artists you follow will show up here."

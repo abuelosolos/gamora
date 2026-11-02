@@ -1,5 +1,7 @@
 import { z } from "zod"
+import { BIRTHDAY_MESSAGES, checkBirthday } from "@/lib/birthday"
 import { INTERESTS, MAX_INTERESTS } from "@/lib/interests"
+import { isLocation } from "@/lib/locations"
 import { isReservedUsername } from "@/lib/reserved-usernames"
 
 /** Same rule as the database check constraint `profile_username_format`. */
@@ -51,6 +53,78 @@ export const completeOnboardingSchema = z.object({
 })
 
 export type CompleteOnboardingInput = z.input<typeof completeOnboardingSchema>
+
+export const BIO_MAX = 160
+export const DISPLAY_NAME_MAX = 60
+
+/** Same rule as the database check constraint `profile_bio_length`. */
+export const bioSchema = z.string().trim().max(BIO_MAX, `Use ${BIO_MAX} characters or fewer.`)
+
+// Same letter rule as the onboarding name parts, for one combined field.
+export const displayNameSchema = z
+  .string()
+  .trim()
+  .transform((value) => value.replace(/\s+/g, " "))
+  .pipe(
+    z
+      .string()
+      .min(1, "Enter your name.")
+      .max(DISPLAY_NAME_MAX, `Use ${DISPLAY_NAME_MAX} characters or fewer.`)
+      .regex(/^[\p{L}\p{M}][\p{L}\p{M}' -]*$/u, "Use letters only.")
+  )
+
+export const CATEGORY_MAX = 4
+export const CATEGORY_NAME_MAX = 30
+
+// Art categories the artist makes up: a short plain-text name.
+export const categoryNameSchema = z
+  .string()
+  .trim()
+  .transform((value) => value.replace(/\s+/g, " "))
+  .pipe(
+    z
+      .string()
+      .min(2, "Use at least 2 characters.")
+      .max(CATEGORY_NAME_MAX, `Use ${CATEGORY_NAME_MAX} characters or fewer.`)
+      .regex(/^[\p{L}\p{N}][\p{L}\p{N} &-]*$/u, "Use letters, numbers, spaces, & and - only.")
+  )
+
+/** Empty rows are dropped, then up to 4 names with no repeats (ignoring case). */
+export const categoriesSchema = z.preprocess(
+  (value) => (Array.isArray(value) ? value.filter((entry) => typeof entry !== "string" || entry.trim() !== "") : value),
+  z
+    .array(categoryNameSchema)
+    .max(CATEGORY_MAX, `Choose up to ${CATEGORY_MAX}.`)
+    .refine((list) => new Set(list.map((name) => name.toLowerCase())).size === list.length, "Each category must be different.")
+)
+
+/** "remote" or a country code from the list, or nothing. */
+export const locationSchema = z.string().refine(isLocation, "Choose a location from the list.").nullable()
+
+/** Private. "YYYY-MM-DD", a real date, 13 or older, or nothing. */
+export const birthdaySchema = z
+  .string()
+  .superRefine((value, ctx) => {
+    const problem = checkBirthday(value)
+    if (problem) ctx.addIssue({ code: "custom", message: BIRTHDAY_MESSAGES[problem] })
+  })
+  .nullable()
+
+/**
+ * Edit profile. There is no user id here on purpose: the profile being changed
+ * is always the signed-in user's, taken from the session.
+ */
+export const updateProfileSchema = z.strictObject({
+  displayName: displayNameSchema,
+  username: usernameSchema,
+  bio: bioSchema,
+  avatarUrl: z.string().url().max(500).nullable(),
+  categories: categoriesSchema,
+  location: locationSchema,
+  birthday: birthdaySchema,
+})
+
+export type UpdateProfileInput = z.input<typeof updateProfileSchema>
 
 export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
 export const AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"] as const

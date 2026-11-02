@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils"
  */
 
 const toastVariants = cva(
-  "pointer-events-auto flex w-full max-w-97.5 items-start gap-3 rounded-ui-md border bg-bgElevated px-5 py-2.5 text-textPrimary shadow-lg",
+  "pointer-events-auto flex max-w-97.5 items-center gap-3 rounded-ui-md border bg-bgElevated py-3 pr-3 pl-4 text-textPrimary shadow-lg",
   {
     variants: {
       variant: {
@@ -67,11 +67,11 @@ function ToastCard({
     <div
       data-slot="toast"
       role={resolved === "error" ? "alert" : "status"}
-      className={cn(toastVariants({ variant: resolved }), className)}
+      className={cn(toastVariants({ variant: resolved }), progress === undefined ? "w-fit" : "w-full", className)}
     >
       {variantIcon[resolved]}
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 py-1">
-        <p className="text-caption wrap-break-word">{title}</p>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <p className="text-body-sm wrap-break-word">{title}</p>
         {description ? (
           <p className="text-caption wrap-break-word text-textSecondary">{description}</p>
         ) : null}
@@ -99,7 +99,7 @@ function ToastCard({
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss notification"
-          className="-my-1.5 -mr-3 flex size-11 shrink-0 items-center justify-center rounded-ui-md text-textSecondary outline-none transition-colors hover:bg-bgSurface focus-visible:ring-2 focus-visible:ring-accentDefault"
+          className="relative flex size-6 shrink-0 items-center justify-center rounded-full text-textSecondary outline-none transition-colors before:absolute before:-inset-2.5 before:content-[''] hover:text-textPrimary focus-visible:ring-2 focus-visible:ring-accentDefault"
         >
           <X aria-hidden="true" className="size-5" />
         </button>
@@ -196,10 +196,10 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
             <motion.div
               key={id}
               layout={!reduceMotion}
-              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -12 }}
+              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -32 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: reduceMotion ? 0 : 0.2 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -16 }}
+              transition={{ duration: reduceMotion ? 0 : 0.25, ease: "easeOut" }}
               className="flex w-full justify-center"
             >
               <ToastCard {...item} onDismiss={() => dismiss(id)} />
