@@ -12,7 +12,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx --env-file=.env.local scripts/seed.ts",
-    "icons": "svgr --out-dir src/components/icons --typescript --icon -- src/assets/svgs"
+    "icons": "svgr --out-dir src/components/icons --typescript --icon --replace-attr-values \"#5C5C66=currentColor\" -- src/assets/svgs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",

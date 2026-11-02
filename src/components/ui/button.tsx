@@ -1,55 +1,81 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 import { Slot } from "radix-ui"
 
+/**
+ * Figma: ProfileButtons (Fill, Outline) and the popup buttons (accent fill and
+ * accent outline). Body/Medium 15/22, padding 20/10, 44px touch target.
+ *
+ * Variant names `default`, `outline`, `secondary`, `ghost`, `destructive`, `link`
+ * and every size name are kept because the shadcn dialog, drawer and
+ * alert-dialog use them.
+ */
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center gap-2 rounded-ui-md border border-transparent text-body font-medium whitespace-nowrap transition-colors duration-200 outline-none select-none focus-visible:ring-2 focus-visible:ring-accentDefault focus-visible:ring-offset-2 focus-visible:ring-offset-bgDefault disabled:pointer-events-none disabled:text-textDisabled aria-disabled:pointer-events-none aria-disabled:text-textDisabled aria-invalid:border-statusError [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
-        outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+        // accent fill (popup "Continue Applying")
+        default:
+          "bg-accentDefault text-textOnAccent hover:bg-accentPressed active:bg-accentPressed disabled:bg-bgSurface aria-disabled:bg-bgSurface",
+        // neutral fill (Figma ProfileButtonFill)
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "bg-borderStrong text-textPrimary hover:bg-borderDefault active:bg-borderDefault disabled:bg-bgSurface aria-disabled:bg-bgSurface",
+        // neutral outline (Figma ProfileButtonOutline)
+        outline:
+          "border-borderStrong bg-transparent text-textPrimary hover:bg-bgSurface active:bg-bgSurface disabled:border-borderDefault aria-disabled:border-borderDefault",
+        // accent outline (popup "Clear")
+        "outline-accent":
+          "border-accentDefault bg-transparent text-accentDefault hover:bg-accentSubtle active:bg-accentSubtle disabled:border-borderDefault aria-disabled:border-borderDefault",
         ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+          "bg-transparent text-textPrimary hover:bg-bgSurface active:bg-bgSurface",
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-statusError text-textOnAccent hover:opacity-90 active:opacity-90 disabled:bg-bgSurface aria-disabled:bg-bgSurface",
+        link: "text-accentDefault underline-offset-4 hover:underline",
       },
       size: {
-        default:
-          "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-8",
-        "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-9",
+        default: "min-h-11 px-5 py-2.5",
+        xs: "min-h-11 px-3 py-1 text-caption",
+        sm: "min-h-11 px-4 py-2 text-body-sm",
+        lg: "min-h-12 px-6 py-3 text-body",
+        icon: "size-11",
+        "icon-xs": "size-11 [&_svg:not([class*='size-'])]:size-4",
+        "icon-sm": "size-11 [&_svg:not([class*='size-'])]:size-5",
+        "icon-lg": "size-12 [&_svg:not([class*='size-'])]:size-6",
+      },
+      fullWidth: {
+        true: "w-full",
+        false: "",
       },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      fullWidth: false,
     },
   }
 )
+
+export interface ButtonProps
+  extends React.ComponentProps<"button">,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean
+  /** Shows a busy state: disables the button and sets aria-busy. */
+  loading?: boolean
+}
 
 function Button({
   className,
   variant = "default",
   size = "default",
+  fullWidth = false,
   asChild = false,
+  loading = false,
+  disabled,
+  children,
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
+}: ButtonProps) {
   const Comp = asChild ? Slot.Root : "button"
 
   return (
@@ -57,9 +83,13 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      aria-busy={loading || undefined}
+      disabled={asChild ? undefined : disabled || loading}
+      className={cn(buttonVariants({ variant, size, fullWidth, className }))}
       {...props}
-    />
+    >
+      {children}
+    </Comp>
   )
 }
 

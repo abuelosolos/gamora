@@ -1,0 +1,163 @@
+/*
+ * Gamora themes. Source: Figma variable collection "Color"
+ * (modes Light, Dark, Black, Blue, Cream). This is the only file in the
+ * project allowed to contain color values.
+ *
+ * The CSS variable names are the Figma variable names.
+ * The active theme is set by data-theme on <html> (rendered on the server
+ * from the "gamora-theme" cookie).
+ */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --bgDefault: #ffffff;
+  --bgSurface: #f5f5f7;
+  --bgElevated: #ffffff;
+  --borderDefault: #e4e4e8;
+  --borderStrong: #c7c7ce;
+  --textPrimary: #111111;
+  --textSecondary: #5c5c66;
+  --textDisabled: #9a9aa3;
+  --textOnAccent: #ffffff;
+  --accentDefault: #1d4ed8;
+  --accentPressed: #1e40af;
+  --accentSubtle: #e6edff;
+  --premiumLock: #a16207;
+  --statusSuccess: #15803d;
+  --statusWarning: #b45309;
+  --statusError: #b91c1c;
+  --statusInfo: #0369a1;
+  --overlayScrim: #00000066;
+  /* Brand mark. Same in every theme. Source: src/assets/logo */
+  --logoPrimary: #0e3dcf;
+  --logoSecondary: #4478fd;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bgDefault: #121214;
+  --bgSurface: #1c1c1f;
+  --bgElevated: #26262a;
+  --borderDefault: #2e2e33;
+  --borderStrong: #46464d;
+  --textPrimary: #f2f2f3;
+  --textSecondary: #a1a1aa;
+  --textDisabled: #5e5e66;
+  --textOnAccent: #0b1020;
+  --accentDefault: #60a5fa;
+  --accentPressed: #3b82f6;
+  --accentSubtle: #1a2744;
+  --premiumLock: #e5b94e;
+  --statusSuccess: #4ade80;
+  --statusWarning: #fbbf24;
+  --statusError: #f87171;
+  --statusInfo: #38bdf8;
+  --overlayScrim: #000000b3;
+  /* Brand mark. Same in every theme. Source: src/assets/logo */
+  --logoPrimary: #0e3dcf;
+  --logoSecondary: #4478fd;
+}
+
+[data-theme="black"] {
+  color-scheme: dark;
+  --bgDefault: #000000;
+  --bgSurface: #0c0c0d;
+  --bgElevated: #161618;
+  --borderDefault: #232326;
+  --borderStrong: #3a3a3f;
+  --textPrimary: #ffffff;
+  --textSecondary: #a8a8b0;
+  --textDisabled: #5a5a62;
+  --textOnAccent: #000000;
+  --accentDefault: #4f9cff;
+  --accentPressed: #3b82f6;
+  --accentSubtle: #0f1b2e;
+  --premiumLock: #e5b94e;
+  --statusSuccess: #4ade80;
+  --statusWarning: #fbbf24;
+  --statusError: #f87171;
+  --statusInfo: #38bdf8;
+  --overlayScrim: #000000cc;
+  /* Brand mark. Same in every theme. Source: src/assets/logo */
+  --logoPrimary: #0e3dcf;
+  --logoSecondary: #4478fd;
+}
+
+[data-theme="blue"] {
+  color-scheme: dark;
+  --bgDefault: #0a1226;
+  --bgSurface: #121c38;
+  --bgElevated: #1a2648;
+  --borderDefault: #243157;
+  --borderStrong: #3a4a7a;
+  --textPrimary: #eaf0ff;
+  --textSecondary: #9fb0d6;
+  --textDisabled: #5b6a94;
+  --textOnAccent: #06122b;
+  --accentDefault: #7dd3fc;
+  --accentPressed: #38bdf8;
+  --accentSubtle: #15264f;
+  --premiumLock: #f5c451;
+  --statusSuccess: #4ade80;
+  --statusWarning: #fbbf24;
+  --statusError: #fb7185;
+  --statusInfo: #93c5fd;
+  --overlayScrim: #040a1ab3;
+  /* Brand mark. Same in every theme. Source: src/assets/logo */
+  --logoPrimary: #0e3dcf;
+  --logoSecondary: #4478fd;
+}
+
+[data-theme="cream"] {
+  color-scheme: light;
+  --bgDefault: #f6f0e4;
+  --bgSurface: #efe7d6;
+  --bgElevated: #fbf7ee;
+  --borderDefault: #e0d6c0;
+  --borderStrong: #c4b697;
+  --textPrimary: #2a2418;
+  --textSecondary: #6b5f48;
+  --textDisabled: #a79b82;
+  --textOnAccent: #ffffff;
+  --accentDefault: #1f5d3a;
+  --accentPressed: #16452b;
+  --accentSubtle: #dde8d9;
+  --premiumLock: #8a5a0b;
+  --statusSuccess: #1b6e2d;
+  --statusWarning: #a25a00;
+  --statusError: #b42318;
+  --statusInfo: #1d5f99;
+  --overlayScrim: #1a1408a6;
+  /* Brand mark. Same in every theme. Source: src/assets/logo */
+  --logoPrimary: #0e3dcf;
+  --logoSecondary: #4478fd;
+}
+
+/*
+ * Tailwind mapping. Gives utilities named after the Figma variables, e.g.
+ * bg-bgDefault, text-textPrimary, border-borderDefault, ring-accentDefault.
+ * "inline" keeps the var() reference, so utilities follow the active theme.
+ */
+@theme inline {
+  --color-bgDefault: var(--bgDefault);
+  --color-bgSurface: var(--bgSurface);
+  --color-bgElevated: var(--bgElevated);
+  --color-borderDefault: var(--borderDefault);
+  --color-borderStrong: var(--borderStrong);
+  --color-textPrimary: var(--textPrimary);
+  --color-textSecondary: var(--textSecondary);
+  --color-textDisabled: var(--textDisabled);
+  --color-textOnAccent: var(--textOnAccent);
+  --color-accentDefault: var(--accentDefault);
+  --color-accentPressed: var(--accentPressed);
+  --color-accentSubtle: var(--accentSubtle);
+  --color-premiumLock: var(--premiumLock);
+  --color-statusSuccess: var(--statusSuccess);
+  --color-statusWarning: var(--statusWarning);
+  --color-statusError: var(--statusError);
+  --color-statusInfo: var(--statusInfo);
+  --color-overlayScrim: var(--overlayScrim);
+  --color-logoPrimary: var(--logoPrimary);
+  --color-logoSecondary: var(--logoSecondary);
+}
