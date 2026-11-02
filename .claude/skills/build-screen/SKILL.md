@@ -32,7 +32,7 @@ For every element in the design, search src/components first (ui, shared, layout
 ## 5. Styling
 - Use theme tokens (CSS variables in src/styles/themes.css, through Tailwind classes). No hex values and no arbitrary colors.
 - Spacing scale 4, 8, 12, 16, 20, 24, 32, 40, 48. Radius 8, 16, 24 or full.
-- Use the defined text styles: Fraunces for display and titles, Inter for everything else.
+- Use the defined text styles: Poppins for all text (Regular 400, Medium 500, SemiBold 600; buttons are Poppins Medium 15/22). Geom only for the GAMORA wordmark (type/display).
 - Mobile-first at 390px width. On desktop the screen renders inside the phone frame.
 - It must look right in all five themes: light, dark, black, blue, cream.
 

@@ -1,0 +1,18 @@
+import * as React from "react";
+import type { SVGProps } from "react";
+const SvgArrowUpLeft = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="1em"
+    height="1em"
+    fill="none"
+    viewBox="0 0 24 24"
+    {...props}
+  >
+    <path
+      fill="currentColor"
+      d="M18.53 18.53a.747.747 0 0 1-1.06 0L6.75 7.81v7.94a.75.75 0 1 1-1.5 0V6A.75.75 0 0 1 6 5.25h9.75a.75.75 0 1 1 0 1.5H7.81l10.72 10.72a.747.747 0 0 1 0 1.06"
+    />
+  </svg>
+);
+export default SvgArrowUpLeft;

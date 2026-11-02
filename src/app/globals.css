@@ -1,15 +1,20 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "../styles/themes.css";
 
-@custom-variant dark (&:is(.dark *));
+/* dark: variant follows the three dark themes (dark, black, blue). */
+@custom-variant dark (&:is([data-theme="dark"], [data-theme="black"], [data-theme="blue"]) *);
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  /* Titles are Poppins SemiBold in Figma; `font-display` is kept as the class name. */
+  --font-display: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-display);
+  --font-wordmark: var(--font-geom), var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -39,6 +44,25 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* Figma type styles (Color/Spacing/Radius/Sizing collections + type/* styles) */
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+  --text-body: 15px;
+  --text-body--line-height: 22px;
+  --text-title-s: 17px;
+  --text-title-s--line-height: 24px;
+  --text-title-m: 20px;
+  --text-title-m--line-height: 28px;
+  --text-title-l: 24px;
+  --text-title-l--line-height: 32px;
+  --text-display: 32px;
+  --text-display--line-height: 40px;
+  /* Figma Radius collection: radiusSm 8, radiusMd 16, radiusLg 24, radiusFull 999 */
+  --radius-ui-sm: 8px;
+  --radius-ui-md: 16px;
+  --radius-ui-lg: 24px;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -48,73 +72,46 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+/*
+ * shadcn's semantic tokens, pointed at the Figma tokens from themes.css.
+ * No color values here: switching data-theme re-themes every shadcn component.
+ * The [data-theme] selector re-resolves these inside nested theme scopes
+ * (used by the /dev/components preview).
+ */
+:root,
+[data-theme] {
+  --background: var(--bgDefault);
+  --foreground: var(--textPrimary);
+  --card: var(--bgElevated);
+  --card-foreground: var(--textPrimary);
+  --popover: var(--bgElevated);
+  --popover-foreground: var(--textPrimary);
+  --primary: var(--accentDefault);
+  --primary-foreground: var(--textOnAccent);
+  --secondary: var(--bgSurface);
+  --secondary-foreground: var(--textPrimary);
+  --muted: var(--bgSurface);
+  --muted-foreground: var(--textSecondary);
+  --accent: var(--accentSubtle);
+  --accent-foreground: var(--textPrimary);
+  --destructive: var(--statusError);
+  --border: var(--borderDefault);
+  --input: var(--borderStrong);
+  --ring: var(--accentDefault);
+  --chart-1: var(--accentDefault);
+  --chart-2: var(--statusSuccess);
+  --chart-3: var(--statusWarning);
+  --chart-4: var(--statusInfo);
+  --chart-5: var(--premiumLock);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar: var(--bgSurface);
+  --sidebar-foreground: var(--textPrimary);
+  --sidebar-primary: var(--accentDefault);
+  --sidebar-primary-foreground: var(--textOnAccent);
+  --sidebar-accent: var(--accentSubtle);
+  --sidebar-accent-foreground: var(--textPrimary);
+  --sidebar-border: var(--borderDefault);
+  --sidebar-ring: var(--accentDefault);
 }
 
 @layer base {
