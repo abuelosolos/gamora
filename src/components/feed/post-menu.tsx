@@ -14,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { ReportSheet } from "@/components/report/report-sheet"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/toast"
@@ -31,16 +32,20 @@ export interface PostMenuProps {
   onDeleted?: () => void
   /** Where to go after deleting, for the post page where the card disappears. */
   redirectTo?: string
+  /** Wording for the report sheet. The server decides the real type from the row. */
+  noun?: "post" | "reply"
 }
 
 /**
  * The three-dot menu. Figma "Post Interaction Popup": the author sees Delete,
- * everyone else sees Follow. The server checks both again.
+ * everyone else sees Follow and Report (which opens the report sheet; replies
+ * use the same menu). The server checks both again.
  */
-function PostMenu({ postId, username, isOwner, following, onDeleted, redirectTo }: PostMenuProps) {
+function PostMenu({ postId, username, isOwner, following, onDeleted, redirectTo, noun = "post" }: PostMenuProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [confirming, setConfirming] = React.useState(false)
+  const [reporting, setReporting] = React.useState(false)
   const [pending, startTransition] = React.useTransition()
   const { following: isFollowing, toggle: toggleFollow } = useFollow(username, following)
 
@@ -80,10 +85,16 @@ function PostMenu({ postId, username, isOwner, following, onDeleted, redirectTo 
               Delete post
             </DropdownMenuItem>
           ) : (
-            <DropdownMenuItem className="min-h-11 px-3 text-body-sm" onSelect={() => void toggleFollow()}>
-              {isFollowing ? <UserFill aria-hidden="true" /> : <User aria-hidden="true" />}
-              {isFollowing ? "Unfollow" : "Follow"} @{username}
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem className="min-h-11 px-3 text-body-sm" onSelect={() => void toggleFollow()}>
+                {isFollowing ? <UserFill aria-hidden="true" /> : <User aria-hidden="true" />}
+                {isFollowing ? "Unfollow" : "Follow"} @{username}
+              </DropdownMenuItem>
+              {/* TODO(icon): Flag is not in src/components/icons yet, so Report has no icon. */}
+              <DropdownMenuItem className="min-h-11 px-3 text-body-sm" onSelect={() => setReporting(true)}>
+                Report
+              </DropdownMenuItem>
+            </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
@@ -105,7 +116,9 @@ function PostMenu({ postId, username, isOwner, following, onDeleted, redirectTo 
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      ) : null}
+      ) : (
+        <ReportSheet open={reporting} onOpenChange={setReporting} target={{ type: "post", id: postId }} noun={noun} />
+      )}
     </>
   )
 }

@@ -52,7 +52,7 @@ async function ProfileContent({
 
   return (
     <main className="flex flex-1 flex-col">
-      <TopNavbar variant="profile" backHref="/feed" more={<ProfileMenu isOwner={profile.isOwner} />} />
+      <TopNavbar variant="profile" backHref="/feed" more={<ProfileMenu isOwner={profile.isOwner} username={profile.username} />} />
       <ProfileHeader profile={profile} />
       <ProfileTabs username={profile.username} active={tab} />
       {page ? (

@@ -8,6 +8,8 @@ import type { ProfileTab } from "@/server/validators/posts"
  * underline. Each tab is a link (?tab=posts), so the choice lives in the URL
  * and survives a reload. Activity is the default and has no query.
  *
+ * Subscribed Posts opens the Coming soon screen (no subscriptions yet).
+ *
  * Deviation: inactive tabs use textSecondary (textDisabled is under 4.5:1 on
  * several themes), same as the feed tabs. The strip scrolls sideways if the
  * labels ever outgrow the screen.
@@ -29,9 +31,15 @@ function ProfileTabs({ username, active }: { username: string; active: ProfileTa
           return (
             <li key={tab.value} className="shrink-0">
               <Link
-                href={tab.value === "activity" ? `/u/${username}` : `/u/${username}?tab=${tab.value}`}
-                replace
-                scroll={false}
+                href={
+                  tab.value === "subscribed"
+                    ? "/unavailable/subscriptions"
+                    : tab.value === "activity"
+                      ? `/u/${username}`
+                      : `/u/${username}?tab=${tab.value}`
+                }
+                replace={tab.value !== "subscribed"}
+                scroll={tab.value === "subscribed" ? undefined : false}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex min-h-11 items-center border-b-2 text-caption whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-accentDefault",

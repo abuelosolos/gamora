@@ -32,7 +32,7 @@ import { eq, inArray } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/neon-http"
 import sharp from "sharp"
 import type { Interest } from "@/lib/interests"
-import { postImages, posts, profile, user } from "@/server/db/schema"
+import { jobs, postImages, posts, profile, user } from "@/server/db/schema"
 
 const SEED_DIR = path.join(process.cwd(), "src/server/db/seed-data")
 const EXTENSIONS = [".webp", ".png", ".jpg", ".jpeg"]
@@ -97,6 +97,101 @@ const POSTS: DemoPost[] = [
   { author: "sana_demo", body: "Which color palette would you use for a night scene?", images: [] },
   { author: "juno_demo", body: "Glow effect test: pink against cyan.", images: ["art-02"] },
   { author: "kai_demo", body: "What should the next comic be about? Open to ideas.", images: [] },
+]
+
+interface DemoJob {
+  title: string
+  summary: string
+  description: string
+  posterName: string
+  jobType: "full_time" | "part_time" | "contract" | "freelance"
+  payAmount: number
+  payUnit: string
+}
+
+// SAMPLE jobs. Poster names are invented; every row is flagged is_sample.
+// The first three are the ones in the Figma Jobs screen.
+const JOBS: DemoJob[] = [
+  {
+    title: "Fantasy Novel Cover Art",
+    summary: "Pixel artist needed for a minecraft fantasy novel series cover",
+    description:
+      "We are a small indie press looking for a pixel artist to paint covers for a three-book fantasy series set in a blocky, Minecraft-inspired world.\n\nYou would deliver one cover per book, plus a wide banner crop for each. Send us works that show your pixel and fantasy scenes.",
+    posterName: "Anna Stacy Huh",
+    jobType: "full_time",
+    payAmount: 200,
+    payUnit: "Cover",
+  },
+  {
+    title: "Mystery Thriller Book Cover Design",
+    summary: "Graphic designer sought for a gripping mystery thriller series cover",
+    description:
+      "A thriller series needs a consistent look: dark palettes, bold type and one striking central image per cover.\n\nPart time, spread over a few weeks. Show us covers or posters that carry a mood.",
+    posterName: "Liam Rodriguez",
+    jobType: "part_time",
+    payAmount: 150,
+    payUnit: "Cover",
+  },
+  {
+    title: "Sci-Fi Graphic Novel Illustrations",
+    summary: "Illustrator needed for a futuristic sci-fi graphic novel",
+    description:
+      "Full-page and spot illustrations for a futuristic graphic novel. You will work from a script and character sheets, and we review sketches before final art.\n\nContract work, paid per finished illustration.",
+    posterName: "Sophie Chen",
+    jobType: "contract",
+    payAmount: 250,
+    payUnit: "Illustration",
+  },
+  {
+    title: "Romantic Comedy E-Book Cover",
+    summary: "Designer required for a lighthearted romantic comedy e-book cover",
+    description:
+      "One bright, playful cover for a romantic comedy e-book, in a flat illustrated style. Two rounds of changes are included.",
+    posterName: "James Patel",
+    jobType: "freelance",
+    payAmount: 100,
+    payUnit: "Cover",
+  },
+  {
+    title: "Character Designs for a Card Game",
+    summary: "Cartoon artist wanted for twelve original card game characters",
+    description:
+      "A tabletop card game needs twelve original characters with clear silhouettes and strong colour. We supply short descriptions; you supply the look.",
+    posterName: "Maya Okafor",
+    jobType: "freelance",
+    payAmount: 80,
+    payUnit: "Character",
+  },
+  {
+    title: "Animated Logo Loop",
+    summary: "Animator needed for a short looping logo for a podcast",
+    description:
+      "A three-second looping animation of an existing logo, delivered as a video and a GIF. Simple motion, polished timing.",
+    posterName: "Daniel Reyes",
+    jobType: "contract",
+    payAmount: 300,
+    payUnit: "Loop",
+  },
+  {
+    title: "Weekly Webcomic Panels",
+    summary: "Comic artist for a weekly four-panel webcomic",
+    description:
+      "A weekly four-panel comic with a steady cast. Scripts arrive on Mondays and finished panels are due by Friday.",
+    posterName: "Ines Moreau",
+    jobType: "part_time",
+    payAmount: 120,
+    payUnit: "Strip",
+  },
+  {
+    title: "Profile Pictures for a Community",
+    summary: "Pfp artist needed for a set of twenty community avatars",
+    description:
+      "Twenty matching profile pictures for an online art community, all on the same grid and palette so they look like a set.",
+    posterName: "Tunde Bello",
+    jobType: "full_time",
+    payAmount: 60,
+    payUnit: "Avatar",
+  },
 ]
 
 const demoId = (username: string) => `demo-${username}`
@@ -233,6 +328,13 @@ async function main() {
     }
     console.log(`  + @${post.author}: ${images.length} image(s)`)
   }
+
+  // 4. Sample jobs. They have no owner, so the user delete above does not remove them: clear and recreate.
+  console.log(`Creating ${JOBS.length} sample jobs`)
+  await db.delete(jobs).where(eq(jobs.isSample, true))
+  await db.insert(jobs).values(
+    JOBS.map((job, index) => ({ ...job, isSample: true, createdAt: new Date(now - index * 6 * HOUR) }))
+  )
 
   console.log("Done.")
 }

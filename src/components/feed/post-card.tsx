@@ -37,6 +37,8 @@ export interface PostCardProps
   post: PostView
   /** Feed list only: remove the card after the author deletes it. */
   onDeleted?: () => void
+  /** True for a reply: only changes the wording of the report sheet. */
+  isReply?: boolean
 }
 
 function PostImages({ post, variant }: { post: PostView; variant: "feed" | "detail" }) {
@@ -95,7 +97,7 @@ function PostImages({ post, variant }: { post: PostView; variant: "feed" | "deta
   )
 }
 
-function PostCard({ post, variant = "feed", onDeleted, className, ...props }: PostCardProps) {
+function PostCard({ post, variant = "feed", onDeleted, isReply, className, ...props }: PostCardProps) {
   const resolved = variant ?? "feed"
   const { author } = post
   const href = `/post/${post.id}`
@@ -127,6 +129,7 @@ function PostCard({ post, variant = "feed", onDeleted, className, ...props }: Po
           isOwner={post.isOwner}
           following={post.viewer.followsAuthor}
           onDeleted={onDeleted}
+          noun={isReply ? "reply" : "post"}
           redirectTo={resolved === "detail" ? "/feed" : undefined}
         />
       </div>

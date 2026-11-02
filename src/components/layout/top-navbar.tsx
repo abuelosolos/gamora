@@ -25,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton"
  *   profile   Back                    | Search, More
  *   post      Close                   | Drafts, Post
  *   settings  Back + "Edit profile"   | Save (greyed out while there is nothing to save: canSave=false)
+ *   page      Back + title            | nothing (settings list, appearance, account)
  *
  * Search arrives in Phase 6 and chat is not available, so search is disabled
  * and chat goes to the Coming soon screen. Pass a slot (`filters`, `more`) to
@@ -42,6 +43,7 @@ export type TopNavbarProps = { className?: string } & (
   | { variant: "profile"; backHref: string; more?: React.ReactNode }
   | { variant: "post"; closeHref: string; formId: string; submitting?: boolean; canPost?: boolean }
   | { variant: "settings"; backHref: string; formId: string; saving?: boolean; canSave?: boolean; title?: string }
+  | { variant: "page"; backHref: string; title?: string }
 )
 
 function SearchButton() {
@@ -186,6 +188,20 @@ function TopNavbar(props: TopNavbarProps) {
               >
                 Post
               </button>
+            </>
+          }
+        />
+      )
+
+    // Settings list and its sub-screens (appearance, account): back + title, nothing to save.
+    case "page":
+      return (
+        <TopBar
+          className={className}
+          leading={
+            <>
+              <BackButton href={props.backHref} />
+              {props.title ? <h1 className="truncate text-body font-medium text-textPrimary">{props.title}</h1> : null}
             </>
           }
         />

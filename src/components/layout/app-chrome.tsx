@@ -7,7 +7,7 @@ import { PostButton } from "@/components/layout/post-button"
 /**
  * Which floating pieces each screen shows. From the Figma frames:
  *   Home                      nav + post button above the nav
- *   Search, Jobs, Activity    nav only
+ *   Search, Jobs wall, Activity   nav only
  *   Profile                   post button near the bottom (no nav)
  *   Create, post, settings, report, anything else   nothing
  * Add a row here when a later phase adds a screen.
@@ -19,6 +19,8 @@ const NONE: Chrome = { nav: false, postButton: null }
 const RULES: { prefix: string; chrome: Chrome }[] = [
   { prefix: "/feed", chrome: { nav: true, postButton: "above-nav" } },
   { prefix: "/search", chrome: { nav: true, postButton: null } },
+  // The job page and its apply sheet have no nav in Figma (Jobs(Post)); only the wall does.
+  { prefix: "/jobs/", chrome: NONE },
   { prefix: "/jobs", chrome: { nav: true, postButton: null } },
   { prefix: "/activity", chrome: { nav: true, postButton: null } },
   { prefix: "/u/", chrome: { nav: false, postButton: "low" } },
