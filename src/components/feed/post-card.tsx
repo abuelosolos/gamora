@@ -2,16 +2,9 @@ import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { cva, type VariantProps } from "class-variance-authority"
-import {
-  ArrowsClockwise,
-  BookmarkSimple,
-  ChatCircle,
-  Heart,
-  ShareNetwork,
-} from "@/components/icons"
+import { PostActions } from "@/components/feed/post-actions"
 import { PostMenu } from "@/components/feed/post-menu"
 import { Avatar } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatPostDate } from "@/lib/format-post-date"
 import { cn } from "@/lib/utils"
@@ -29,8 +22,8 @@ import type { PostView } from "@/server/services/posts"
  * Deviations from the design:
  *  - The time is a date ("Nov 2"), not a clock time, because the server does
  *    not know the reader's time zone.
- *  - The interaction row is shown but disabled, with no counts, until likes,
- *    comments and bookmarks exist (Phase 5).
+ *  - The interaction row is live (see PostActions). An active repost uses
+ *    accentDefault because the icon set has no filled repost icon.
  *  - Drop shadow under the card is a 1px borderDefault line (no raw shadow values).
  */
 const postCardVariants = cva("flex flex-col gap-0.5 border-b border-borderDefault bg-bgDefault px-5 py-2.5", {
@@ -44,33 +37,6 @@ export interface PostCardProps
   post: PostView
   /** Feed list only: remove the card after the author deletes it. */
   onDeleted?: () => void
-}
-
-function InteractionRow() {
-  const item = "text-textSecondary [&_svg:not([class*='size-'])]:size-5"
-  return (
-    <div className="-mx-2.5 flex items-center justify-between" role="group" aria-label="Post actions, coming soon">
-      <div className="flex items-center">
-        <Button variant="ghost" size="icon" disabled aria-label="Like, coming soon" className={item}>
-          <Heart aria-hidden="true" />
-        </Button>
-        <Button variant="ghost" size="icon" disabled aria-label="Comment, coming soon" className={item}>
-          <ChatCircle aria-hidden="true" />
-        </Button>
-        <Button variant="ghost" size="icon" disabled aria-label="Repost, coming soon" className={item}>
-          <ArrowsClockwise aria-hidden="true" />
-        </Button>
-      </div>
-      <div className="flex items-center">
-        <Button variant="ghost" size="icon" disabled aria-label="Bookmark, coming soon" className={item}>
-          <BookmarkSimple aria-hidden="true" />
-        </Button>
-        <Button variant="ghost" size="icon" disabled aria-label="Share, coming soon" className={item}>
-          <ShareNetwork aria-hidden="true" />
-        </Button>
-      </div>
-    </div>
-  )
 }
 
 function PostImages({ post, variant }: { post: PostView; variant: "feed" | "detail" }) {
@@ -155,13 +121,14 @@ function PostCard({ post, variant = "feed", onDeleted, className, ...props }: Po
             </span>
           </span>
         </Link>
-        {post.isOwner ? (
-          <PostMenu
-            postId={post.id}
-            onDeleted={onDeleted}
-            redirectTo={resolved === "detail" ? "/feed" : undefined}
-          />
-        ) : null}
+        <PostMenu
+          postId={post.id}
+          username={author.username}
+          isOwner={post.isOwner}
+          following={post.viewer.followsAuthor}
+          onDeleted={onDeleted}
+          redirectTo={resolved === "detail" ? "/feed" : undefined}
+        />
       </div>
 
       {post.body ? (
@@ -178,7 +145,7 @@ function PostCard({ post, variant = "feed", onDeleted, className, ...props }: Po
       ) : null}
 
       <PostImages post={post} variant={resolved} />
-      <InteractionRow />
+      <PostActions post={post} />
     </article>
   )
 }

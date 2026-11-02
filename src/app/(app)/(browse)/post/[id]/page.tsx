@@ -1,15 +1,18 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { CommentSection, CommentSectionSkeleton } from "@/components/comments/comment-section"
 import { PostCard, PostCardSkeleton } from "@/components/feed/post-card"
 import { CaretLeft } from "@/components/icons"
 import { TopBar, TopBarButton } from "@/components/layout/top-bar"
 import { getUser } from "@/server/auth/session"
+import { listComments } from "@/server/services/interactions"
 import { getPostById } from "@/server/services/posts"
+import { getProfileByUserId } from "@/server/services/profile"
 import { postIdSchema } from "@/server/validators/posts"
 
 // Public: readable signed out. There is no post-detail frame in Figma, so this
-// reuses the post card at full width (variant="detail").
+// reuses the post card at full width (variant="detail") with the comments below.
 export const metadata = { title: "Post" }
 
 export default function PostPage({ params }: PageProps<"/post/[id]">) {
@@ -29,6 +32,7 @@ export default function PostPage({ params }: PageProps<"/post/[id]">) {
         fallback={
           <div role="status" aria-label="Loading post">
             <PostCardSkeleton />
+            <CommentSectionSkeleton />
           </div>
         }
       >
@@ -44,8 +48,22 @@ async function PostContent({ params }: { params: PageProps<"/post/[id]">["params
   if (!parsed.success) notFound()
 
   const user = await getUser()
-  const post = await getPostById(parsed.data, user?.id ?? null)
+  const [post, comments, profile] = await Promise.all([
+    getPostById(parsed.data, user?.id ?? null),
+    listComments({ postId: parsed.data, cursor: null, viewerId: user?.id ?? null }),
+    user ? getProfileByUserId(user.id) : null,
+  ])
   if (!post) notFound()
 
-  return <PostCard post={post} variant="detail" />
+  return (
+    <>
+      <PostCard post={post} variant="detail" />
+      <CommentSection
+        postId={post.id}
+        initial={comments}
+        initialCount={post.commentCount}
+        viewer={user && profile ? { name: user.name, username: profile.username, avatarUrl: profile.avatarUrl } : null}
+      />
+    </>
+  )
 }

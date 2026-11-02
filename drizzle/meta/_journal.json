@@ -15,6 +15,13 @@
       "when": 1793649333257,
       "tag": "0001_lumpy_sally_floyd",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793652341439,
+      "tag": "0002_phase_5_interactions",
+      "breakpoints": true
     }
   ]
 }
