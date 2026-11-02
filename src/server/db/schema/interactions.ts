@@ -71,6 +71,7 @@ export const reposts = pgTable(
   ],
 );
 
+/** @deprecated Replaced by posts.parent_id (migration 0004). Nothing reads or writes it; dropped in a later migration. */
 export const comments = pgTable(
   "comments",
   {
@@ -141,7 +142,9 @@ export const notifications = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     type: notificationType("type").notNull(),
     postId: text("post_id").references(() => posts.id, { onDelete: "cascade" }),
-    commentId: text("comment_id").references(() => comments.id, {
+    // The reply (a post) a "comment" notification is about. The column keeps
+    // its old name; its foreign key points at posts since replies became posts.
+    replyId: text("comment_id").references(() => posts.id, {
       onDelete: "cascade",
     }),
     readAt: timestamp("read_at"),
@@ -185,10 +188,6 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
     relationName: "notification_actor",
   }),
   post: one(posts, { fields: [notifications.postId], references: [posts.id] }),
-  comment: one(comments, {
-    fields: [notifications.commentId],
-    references: [comments.id],
-  }),
 }));
 
 export type Comment = typeof comments.$inferSelect;

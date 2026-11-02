@@ -10,11 +10,11 @@ import { safeNextPath } from "@/lib/safe-redirect";
  * update or delete query.
  *
  * Signed-out visitors can read: landing, sign-in/up, terms, privacy, the feed,
- * posts and profiles. Everything else needs a session. Writes are enforced in
+ * posts, profiles and the Coming soon pages. Everything else needs a session. Writes are enforced in
  * the server actions regardless of this list.
  */
 const PUBLIC_EXACT = ["/", "/sign-in", "/sign-up", "/terms", "/privacy"];
-const PUBLIC_PREFIXES = ["/api/auth", "/api/health", "/feed", "/post", "/u"];
+const PUBLIC_PREFIXES = ["/api/auth", "/api/health", "/feed", "/post", "/u", "/unavailable"];
 const AUTH_PAGES = ["/sign-in", "/sign-up"];
 
 function isUnder(pathname: string, base: string): boolean {

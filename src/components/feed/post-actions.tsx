@@ -23,7 +23,7 @@ import type { PostView } from "@/server/services/posts"
  * and share on the right. Counts sit next to the icon in the caption style.
  *
  * Likes, bookmarks and reposts are optimistic and roll back on failure (see
- * useOptimisticFlag). Comment opens the post page at the comments. Share
+ * useOptimisticFlag). Reply opens the post page at the replies. Share
  * copies the link to the post.
  *
  * Deviation from the design: there is no filled repost icon in the icon set,
@@ -84,11 +84,11 @@ function PostActions({ post }: { post: PostView }) {
           className={item}
         >
           <Link
-            href={`/post/${post.id}#comments`}
-            aria-label={`Comments, ${post.commentCount} ${post.commentCount === 1 ? "comment" : "comments"}`}
+            href={`/post/${post.id}#replies`}
+            aria-label={`Replies, ${post.replyCount} ${post.replyCount === 1 ? "reply" : "replies"}`}
           >
             <ChatCircle aria-hidden="true" />
-            <Count value={post.commentCount} />
+            <Count value={post.replyCount} />
           </Link>
         </Button>
         <Button

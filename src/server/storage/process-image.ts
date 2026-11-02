@@ -2,6 +2,7 @@ import "server-only"
 import { randomUUID } from "node:crypto"
 import { del, put } from "@vercel/blob"
 import sharp from "sharp"
+import { env } from "@/lib/env.server"
 import {
   UPLOAD_MAX_INPUT_DIMENSION,
   UPLOAD_OUTPUT_MAX_DIMENSION,
@@ -37,22 +38,32 @@ function detectType(b: Buffer): "jpeg" | "png" | "webp" | null {
  * orientation applied, resized to 2000 px, re-encoded as WebP. Re-encoding
  * drops EXIF/GPS and most hidden payloads (sharp keeps no metadata by default).
  */
+const LIMIT_INPUT_PIXELS = UPLOAD_MAX_INPUT_DIMENSION * UPLOAD_MAX_INPUT_DIMENSION
+
+/**
+ * The checks every upload goes through before it is decoded: real type from the
+ * first bytes, then the pixel cap from the header. Shared by posts and avatars.
+ */
+async function checkInput(input: Buffer): Promise<ProcessError | null> {
+  if (!detectType(input)) return "unsupported_type"
+  const meta = await sharp(input, { limitInputPixels: LIMIT_INPUT_PIXELS }).metadata()
+  if (
+    !meta.width ||
+    !meta.height ||
+    meta.width > UPLOAD_MAX_INPUT_DIMENSION ||
+    meta.height > UPLOAD_MAX_INPUT_DIMENSION
+  ) {
+    return meta.width && meta.height ? "too_large_dimensions" : "invalid_image"
+  }
+  return null
+}
+
 export async function processImage(input: Buffer): Promise<ProcessResult> {
-  if (!detectType(input)) return { ok: false, error: "unsupported_type" }
-
   try {
-    // Pixel cap is checked from the header before any decoding happens.
-    const limitInputPixels = UPLOAD_MAX_INPUT_DIMENSION * UPLOAD_MAX_INPUT_DIMENSION
-    const meta = await sharp(input, { limitInputPixels }).metadata()
-    if (
-      !meta.width ||
-      !meta.height ||
-      meta.width > UPLOAD_MAX_INPUT_DIMENSION ||
-      meta.height > UPLOAD_MAX_INPUT_DIMENSION
-    ) {
-      return { ok: false, error: meta.width && meta.height ? "too_large_dimensions" : "invalid_image" }
-    }
+    const rejected = await checkInput(input)
+    if (rejected) return { ok: false, error: rejected }
 
+    const limitInputPixels = LIMIT_INPUT_PIXELS
     const { data, info } = await sharp(input, { limitInputPixels })
       .rotate()
       .resize(UPLOAD_OUTPUT_MAX_DIMENSION, UPLOAD_OUTPUT_MAX_DIMENSION, {
@@ -67,6 +78,43 @@ export async function processImage(input: Buffer): Promise<ProcessResult> {
     console.error("[process-image] failed", error instanceof Error ? error.message : "unknown")
     return { ok: false, error: "invalid_image" }
   }
+}
+
+/** Avatars are stored as a square of this many pixels. */
+const AVATAR_SIZE = 512
+
+/**
+ * Same pipeline as processImage (magic bytes, 6000 px cap, EXIF orientation
+ * applied, metadata dropped, WebP), but cropped to a 512 px square.
+ */
+export async function processAvatar(
+  input: Buffer
+): Promise<{ ok: true; data: Buffer } | { ok: false; error: ProcessError }> {
+  try {
+    const rejected = await checkInput(input)
+    if (rejected) return { ok: false, error: rejected }
+
+    const data = await sharp(input, { limitInputPixels: LIMIT_INPUT_PIXELS })
+      .rotate()
+      .resize(AVATAR_SIZE, AVATAR_SIZE, { fit: "cover" })
+      .webp({ quality: 85 })
+      .toBuffer()
+    return { ok: true, data }
+  } catch (error) {
+    console.error("[process-avatar] failed", error instanceof Error ? error.message : "unknown")
+    return { ok: false, error: "invalid_image" }
+  }
+}
+
+/** Stores a processed avatar under the user's folder with a random name. */
+export async function storeAvatar(userId: string, data: Buffer): Promise<string> {
+  const blob = await put(`avatars/${userId}/${randomUUID()}.webp`, data, {
+    access: "public",
+    contentType: "image/webp",
+    addRandomSuffix: false,
+    token: env.BLOB_READ_WRITE_TOKEN,
+  })
+  return blob.url
 }
 
 export interface StoredImage {

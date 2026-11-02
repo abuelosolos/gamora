@@ -3,23 +3,22 @@
 import { getUser, requireUserForAction } from "@/server/auth/session"
 import { clientIp, withinRateLimits } from "@/server/security/rate-limit"
 import {
-  createComment,
-  deleteOwnComment,
-  listComments,
+  createReply,
+  deleteOwnReply,
+  listReplies,
   listNotifications,
   setFollow,
   setPostFlag,
   type ActivityPage,
-  type CommentView,
-  type CommentsPage,
+  type RepliesPage,
   type PostCounts,
   type PostFlag,
 } from "@/server/services/interactions"
-import { listBookmarkedPosts, type FeedPage } from "@/server/services/posts"
+import { listBookmarkedPosts, type FeedPage, type PostView } from "@/server/services/posts"
 import {
   activityFilterSchema,
-  commentIdSchema,
-  createCommentSchema,
+  replyIdSchema,
+  createReplySchema,
   pageCursorSchema,
   setFollowSchema,
   setPostFlagSchema,
@@ -72,7 +71,7 @@ async function setFlag(kind: PostFlag, input: unknown): Promise<SetFlagActionRes
       ok: true,
       on: result.on,
       likeCount: result.likeCount,
-      commentCount: result.commentCount,
+      replyCount: result.replyCount,
       repostCount: result.repostCount,
     }
   } catch (error) {
@@ -120,86 +119,86 @@ export async function setFollowAction(input: unknown): Promise<SetFollowActionRe
   }
 }
 
-// ---------- Comments ----------
+// ---------- Replies ----------
 
-export type CreateCommentResult = { ok: true; comment: CommentView; commentCount: number } | Failure
+export type CreateReplyResult = { ok: true; reply: PostView; replyCount: number } | Failure
 
-export async function createCommentAction(input: unknown): Promise<CreateCommentResult> {
+export async function createReplyAction(input: unknown): Promise<CreateReplyResult> {
   // 1. Validate.
-  const parsed = createCommentSchema.safeParse(input)
+  const parsed = createReplySchema.safeParse(input)
   if (!parsed.success) {
-    return { ok: false, error: "invalid", message: parsed.error.issues[0]?.message ?? "Check your comment." }
+    return { ok: false, error: "invalid", message: parsed.error.issues[0]?.message ?? "Check your reply." }
   }
 
   // 2. Session.
   const session = await requireUserForAction()
-  if (!session.ok) return UNAUTHORIZED("Sign in to comment.")
+  if (!session.ok) return UNAUTHORIZED("Sign in to reply.")
 
   // 3. Rate limit. A burst limit and an hourly limit.
   const allowed = await withinRateLimits([
-    { name: "comment:burst", key: session.user.id, limit: 5, windowSeconds: 60 },
-    { name: "comment:hour", key: session.user.id, limit: 60, windowSeconds: 60 * 60 },
+    { name: "reply:burst", key: session.user.id, limit: 5, windowSeconds: 60 },
+    { name: "reply:hour", key: session.user.id, limit: 60, windowSeconds: 60 * 60 },
   ])
-  if (!allowed) return { ...RATE_LIMITED, message: "You are commenting a lot. Try again in a little while." }
+  if (!allowed) return { ...RATE_LIMITED, message: "You are replying a lot. Try again in a little while." }
 
   // 4. Write. The author is the session user.
   try {
-    const result = await createComment(session.user.id, parsed.data.postId, parsed.data.body)
+    const result = await createReply(session.user.id, parsed.data.postId, parsed.data.body)
     if (!result.found) return NOT_FOUND("That post is no longer available.")
-    return { ok: true, comment: result.comment, commentCount: result.commentCount }
+    return { ok: true, reply: result.reply, replyCount: result.replyCount }
   } catch (error) {
-    logFailure("createComment", error)
+    logFailure("createReply", error)
     return SERVER_ERROR
   }
 }
 
-export type DeleteCommentResult = { ok: true; commentCount: number } | Failure
+export type DeleteReplyResult = { ok: true; replyCount: number } | Failure
 
-export async function deleteCommentAction(commentId: unknown): Promise<DeleteCommentResult> {
-  const parsed = commentIdSchema.safeParse(commentId)
-  if (!parsed.success) return NOT_FOUND("Comment not found.")
+export async function deleteReplyAction(replyId: unknown): Promise<DeleteReplyResult> {
+  const parsed = replyIdSchema.safeParse(replyId)
+  if (!parsed.success) return NOT_FOUND("Reply not found.")
 
   const session = await requireUserForAction()
   if (!session.ok) return UNAUTHORIZED("Sign in to continue.")
 
   const allowed = await withinRateLimits([
-    { name: "comment-delete:user", key: session.user.id, limit: 60, windowSeconds: 60 * 60 },
+    { name: "reply-delete:user", key: session.user.id, limit: 60, windowSeconds: 60 * 60 },
   ])
   if (!allowed) return RATE_LIMITED
 
   try {
     // Ownership is inside the query. "Not found" and "not yours" look the same.
-    const result = await deleteOwnComment(parsed.data, session.user.id)
-    if (!result.deleted) return NOT_FOUND("Comment not found.")
-    return { ok: true, commentCount: result.commentCount }
+    const result = await deleteOwnReply(parsed.data, session.user.id)
+    if (!result.deleted) return NOT_FOUND("Reply not found.")
+    return { ok: true, replyCount: result.replyCount }
   } catch (error) {
-    logFailure("deleteComment", error)
+    logFailure("deleteReply", error)
     return SERVER_ERROR
   }
 }
 
-export type LoadCommentsResult = { ok: true; page: CommentsPage } | Failure
+export type LoadRepliesResult = { ok: true; page: RepliesPage } | Failure
 
-/** "Load more comments". Public data, so signed-out visitors are limited by IP. */
-export async function loadCommentsAction(postId: unknown, cursor: unknown): Promise<LoadCommentsResult> {
+/** "Load more replies". Public data, so signed-out visitors are limited by IP. */
+export async function loadRepliesAction(postId: unknown, cursor: unknown): Promise<LoadRepliesResult> {
   const parsedPost = postIdSchema.safeParse(postId)
   const parsedCursor = pageCursorSchema.safeParse(cursor ?? null)
   if (!parsedPost.success || !parsedCursor.success) {
-    return { ok: false, error: "invalid", message: "Could not load more comments." }
+    return { ok: false, error: "invalid", message: "Could not load more replies." }
   }
 
   const viewer = await getUser()
   const allowed = await withinRateLimits([
-    { name: "comments:read", key: viewer?.id ?? (await clientIp()), limit: 120, windowSeconds: 10 * 60 },
+    { name: "replies:read", key: viewer?.id ?? (await clientIp()), limit: 120, windowSeconds: 10 * 60 },
   ])
   if (!allowed) return RATE_LIMITED
 
   try {
-    const page = await listComments({ postId: parsedPost.data, cursor: parsedCursor.data, viewerId: viewer?.id ?? null })
+    const page = await listReplies({ postId: parsedPost.data, cursor: parsedCursor.data, viewerId: viewer?.id ?? null })
     return { ok: true, page }
   } catch (error) {
-    logFailure("loadComments", error)
-    return { ok: false, error: "server", message: "Could not load more comments." }
+    logFailure("loadReplies", error)
+    return { ok: false, error: "server", message: "Could not load more replies." }
   }
 }
 

@@ -1,22 +1,22 @@
 import { z } from "zod"
 
-export const COMMENT_BODY_MAX = 1000
-export const COMMENTS_PAGE_SIZE = 20
+export const REPLY_BODY_MAX = 1000
+export const REPLIES_PAGE_SIZE = 20
 export const ACTIVITY_PAGE_SIZE = 20
 
-/** Same rule as the database check constraint `comments_body_length` (1 to 1000). */
-export const commentBodySchema = z
+/** Replies are posts: at least 1 and at most 1000 characters here (the database allows 2000). */
+export const replyBodySchema = z
   .string()
   .trim()
-  .min(1, "Write a comment first.")
-  .max(COMMENT_BODY_MAX, `Use ${COMMENT_BODY_MAX} characters or fewer.`)
+  .min(1, "Write a reply first.")
+  .max(REPLY_BODY_MAX, `Use ${REPLY_BODY_MAX} characters or fewer.`)
 
-export const createCommentSchema = z.strictObject({
+export const createReplySchema = z.strictObject({
   postId: z.uuid(),
-  body: commentBodySchema,
+  body: replyBodySchema,
 })
 
-export const commentIdSchema = z.uuid()
+export const replyIdSchema = z.uuid()
 
 /** "on" is the state the caller wants, not a flip, so repeating a request changes nothing. */
 export const setPostFlagSchema = z.strictObject({

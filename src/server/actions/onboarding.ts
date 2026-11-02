@@ -1,12 +1,11 @@
 "use server"
 
-import { randomUUID } from "node:crypto"
-import { put } from "@vercel/blob"
-import sharp from "sharp"
 import { env } from "@/lib/env.server"
 import { safeNextPath } from "@/lib/safe-redirect"
 import { requireUserForAction } from "@/server/auth/session"
 import { withinRateLimits } from "@/server/security/rate-limit"
+import { isOwnAvatarUrl } from "@/server/storage/blob-urls"
+import { processAvatar, storeAvatar } from "@/server/storage/process-image"
 import {
   createProfileForUser,
   getProfileByUserId,
@@ -15,7 +14,6 @@ import {
 } from "@/server/services/profile"
 import {
   AVATAR_MAX_BYTES,
-  AVATAR_TYPES,
   completeOnboardingSchema,
   usernameSchema,
   type CompleteOnboardingInput,
@@ -47,10 +45,18 @@ export async function checkUsernameAction(raw: string): Promise<UsernameCheck> {
 
 export type AvatarUpload = { ok: true; url: string } | { ok: false; error: string }
 
+const AVATAR_ERRORS = {
+  unsupported_type: "Use a JPEG, PNG or WebP image.",
+  too_large_dimensions: "Image can be at most 6000 px on each side.",
+  invalid_image: "That file could not be read as an image.",
+} as const
+
 /**
- * Re-encodes the upload with sharp (square 512px WebP, metadata stripped). The
- * decoder rejects anything that is not really an image, whatever the client
- * claims in the file type.
+ * Avatar upload, used by onboarding and edit profile. Size and rate limit are
+ * checked first; then the file goes through the same pipeline as post images
+ * (real type from the first bytes, 6000 px cap, re-encode to a 512 px WebP with
+ * metadata dropped) and is stored under the user's own folder with a random name.
+ * The file type the browser sends is not trusted.
  */
 export async function uploadAvatarAction(formData: FormData): Promise<AvatarUpload> {
   const session = await requireUserForAction()
@@ -58,9 +64,6 @@ export async function uploadAvatarAction(formData: FormData): Promise<AvatarUplo
 
   const file = formData.get("avatar")
   if (!(file instanceof File)) return { ok: false, error: "Choose an image." }
-  if (!(AVATAR_TYPES as readonly string[]).includes(file.type)) {
-    return { ok: false, error: "Use a JPEG, PNG or WebP image." }
-  }
   if (file.size === 0 || file.size > AVATAR_MAX_BYTES) {
     return { ok: false, error: "Image must be 2 MB or smaller." }
   }
@@ -70,24 +73,11 @@ export async function uploadAvatarAction(formData: FormData): Promise<AvatarUplo
   ])
   if (!allowed) return { ok: false, error: "Too many uploads. Try again later." }
 
-  let output: Buffer
-  try {
-    output = await sharp(Buffer.from(await file.arrayBuffer()), { limitInputPixels: 40_000_000 })
-      .rotate()
-      .resize(512, 512, { fit: "cover" })
-      .webp({ quality: 85 })
-      .toBuffer()
-  } catch {
-    return { ok: false, error: "That file could not be read as an image." }
-  }
+  const processed = await processAvatar(Buffer.from(await file.arrayBuffer()))
+  if (!processed.ok) return { ok: false, error: AVATAR_ERRORS[processed.error] }
 
   try {
-    const blob = await put(`avatars/${session.user.id}/${randomUUID()}.webp`, output, {
-      access: "public",
-      contentType: "image/webp",
-      token: env.BLOB_READ_WRITE_TOKEN,
-    })
-    return { ok: true, url: blob.url }
+    return { ok: true, url: await storeAvatar(session.user.id, processed.data) }
   } catch {
     return { ok: false, error: "Upload failed. Try again." }
   }
@@ -96,20 +86,6 @@ export async function uploadAvatarAction(formData: FormData): Promise<AvatarUplo
 export type CompleteOnboarding =
   | { ok: true; next: string }
   | { ok: false; error: string; field?: "username" | "name" | "avatar" | "interests" }
-
-/** The avatar URL must be a Blob URL under this user's own folder. */
-function isOwnAvatarUrl(value: string, userId: string): boolean {
-  try {
-    const url = new URL(value)
-    return (
-      url.protocol === "https:" &&
-      url.hostname.endsWith(".public.blob.vercel-storage.com") &&
-      url.pathname.startsWith(`/avatars/${userId}/`)
-    )
-  } catch {
-    return false
-  }
-}
 
 function adminEmails(): Set<string> {
   return new Set(

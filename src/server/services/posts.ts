@@ -1,9 +1,9 @@
 import "server-only"
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 import { db } from "@/server/db"
 import {
   bookmarks,
-  comments,
   follows,
   likes,
   postImages,
@@ -33,7 +33,7 @@ export interface PostView {
   isOwner: boolean
   /** Counted in the database on every read. Never taken from the client. */
   likeCount: number
-  commentCount: number
+  replyCount: number
   repostCount: number
   /** What the signed-in viewer has done. All false when signed out. */
   viewer: { liked: boolean; bookmarked: boolean; reposted: boolean; followsAuthor: boolean }
@@ -58,7 +58,7 @@ export function decodeCursor(cursor: string): { createdAt: string; id: string } 
   return { createdAt, id }
 }
 
-const postColumns = {
+export const postColumns = {
   id: posts.id,
   body: posts.body,
   createdAt: posts.createdAt,
@@ -81,6 +81,8 @@ type PostRow = {
 }
 
 type CountRow = { postId: string; n: number }
+
+const replies = alias(posts, "replies")
 
 function toMap(rows: CountRow[]): Map<string, number> {
   return new Map(rows.map((row) => [row.postId, row.n]))
@@ -105,14 +107,15 @@ async function loadStats(rows: PostRow[], viewerId: string | null) {
     return new Set(mine.map((row) => row.postId))
   }
 
-  const [likeCounts, repostCounts, commentCounts, liked, bookmarked, reposted, followed] = await Promise.all([
+  const [likeCounts, repostCounts, replyCounts, liked, bookmarked, reposted, followed] = await Promise.all([
     countFor(likes),
     countFor(reposts),
+    // Replies are posts whose parent is this post.
     db
-      .select({ postId: comments.postId, n: count() })
-      .from(comments)
-      .where(inArray(comments.postId, ids))
-      .groupBy(comments.postId),
+      .select({ postId: sql<string>`${replies.parentId}`, n: count() })
+      .from(replies)
+      .where(inArray(replies.parentId, ids))
+      .groupBy(replies.parentId),
     mineFor(likes),
     mineFor(bookmarks),
     mineFor(reposts),
@@ -127,7 +130,7 @@ async function loadStats(rows: PostRow[], viewerId: string | null) {
   return {
     likeCounts: toMap(likeCounts),
     repostCounts: toMap(repostCounts),
-    commentCounts: toMap(commentCounts),
+    replyCounts: toMap(replyCounts),
     liked,
     bookmarked,
     reposted,
@@ -135,7 +138,7 @@ async function loadStats(rows: PostRow[], viewerId: string | null) {
   }
 }
 
-async function attachImages(rows: PostRow[], viewerId: string | null): Promise<PostView[]> {
+export async function attachImages(rows: PostRow[], viewerId: string | null): Promise<PostView[]> {
   if (rows.length === 0) return []
   const [images, stats] = await Promise.all([
     db
@@ -173,7 +176,7 @@ async function attachImages(rows: PostRow[], viewerId: string | null): Promise<P
     images: byPost.get(row.id) ?? [],
     isOwner: viewerId !== null && viewerId === row.authorId,
     likeCount: stats.likeCounts.get(row.id) ?? 0,
-    commentCount: stats.commentCounts.get(row.id) ?? 0,
+    replyCount: stats.replyCounts.get(row.id) ?? 0,
     repostCount: stats.repostCounts.get(row.id) ?? 0,
     viewer: {
       liked: stats.liked.has(row.id),
@@ -210,6 +213,7 @@ export async function listFeed(params: {
     .innerJoin(profile, eq(profile.userId, posts.authorId))
     .where(
       and(
+        isNull(posts.parentId),
         after,
         params.tab === "following"
           ? inArray(
@@ -219,6 +223,36 @@ export async function listFeed(params: {
           : undefined
       )
     )
+    .orderBy(desc(posts.createdAt), desc(posts.id))
+    .limit(FEED_PAGE_SIZE + 1)
+
+  const hasMore = rows.length > FEED_PAGE_SIZE
+  const page = hasMore ? rows.slice(0, FEED_PAGE_SIZE) : rows
+  const last = page.at(-1)
+
+  return {
+    items: await attachImages(page, params.viewerId),
+    nextCursor: hasMore && last ? encodeCursor(last.createdAtText, last.id) : null,
+  }
+}
+
+/** One artist's posts, newest first, same keyset pagination as the feed (posts_author_idx). */
+export async function listPostsByUsername(params: {
+  username: string
+  cursor: string | null
+  viewerId: string | null
+}): Promise<FeedPage> {
+  const decoded = params.cursor ? decodeCursor(params.cursor) : null
+  const after = decoded
+    ? sql`(${posts.createdAt}, ${posts.id}) < (${decoded.createdAt}::timestamp, ${decoded.id})`
+    : undefined
+
+  const rows = await db
+    .select(postColumns)
+    .from(posts)
+    .innerJoin(user, eq(user.id, posts.authorId))
+    .innerJoin(profile, eq(profile.userId, posts.authorId))
+    .where(and(eq(profile.username, params.username), isNull(posts.parentId), after))
     .orderBy(desc(posts.createdAt), desc(posts.id))
     .limit(FEED_PAGE_SIZE + 1)
 

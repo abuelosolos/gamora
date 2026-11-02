@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import { FeedList } from "@/components/feed/feed-list"
+import { PostUploadBanner } from "@/components/feed/post-upload"
 import { FeedTabs } from "@/components/feed/feed-tabs"
 import { PostCardSkeleton } from "@/components/feed/post-card"
 import { TopNavbar, TopNavbarSkeleton } from "@/components/layout/top-navbar"
@@ -39,9 +40,10 @@ async function FeedContent({ searchParams }: { searchParams: PageProps<"/feed">[
           user && profile ? { name: user.name, username: profile.username, avatarUrl: profile.avatarUrl } : null
         }
       />
+      <PostUploadBanner />
       <FeedTabs active={tab} />
       {/* key resets the list (and its cursor) when the tab changes. */}
-      <FeedList key={tab} tab={tab} initial={page} />
+      <FeedList key={tab} source={{ kind: "feed", tab }} initial={page} />
     </main>
   )
 }

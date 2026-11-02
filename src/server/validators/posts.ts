@@ -32,6 +32,11 @@ export const postIdSchema = z.uuid()
 export const feedTabSchema = z.enum(["for-you", "following"])
 export type FeedTab = z.infer<typeof feedTabSchema>
 
+/** Profile sections, in the order of Figma's ProfileSlipSelect. */
+export const PROFILE_TABS = ["activity", "posts", "likes", "reposts", "subscribed"] as const
+export const profileTabSchema = z.enum(PROFILE_TABS)
+export type ProfileTab = z.infer<typeof profileTabSchema>
+
 /**
  * Opaque cursor: base64url of "<created_at as text>|<id>". The timestamp stays
  * a string so microsecond precision survives (a JS Date would cut it to ms and

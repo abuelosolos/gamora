@@ -4,24 +4,24 @@ import * as React from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Camera, ImagesSquare, LinkSimple, Video, X } from "@/components/icons"
+import { usePostUpload } from "@/components/feed/post-upload"
 import { TopNavbar } from "@/components/layout/top-navbar"
 import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Chip } from "@/components/ui/chip"
 import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/components/ui/toast"
-import { createPostAction } from "@/server/actions/posts"
 import { POST_BODY_MAX, POST_MAX_IMAGES } from "@/server/validators/posts"
 import { UPLOAD_MAX_BYTES } from "@/server/validators/upload"
 
 /**
  * Figma: Post, Post (Multi Images), Post (Uploading), Post (Uploaded).
  *
- * Flow: pick images (kept in the browser), press Post, upload them to
- * /api/upload, then create the post with the returned URLs. The toast shows
+ * Flow: pick images (kept in the browser), press Post; the composer closes and
+ * the feed shows the upload bar (see post-upload.tsx), which uploads them to
+ * /api/upload and then creates the post with the returned URLs. The bar shows
  * "Your post is being uploaded" with a progress bar (the Figma popup) and turns
- * green when done. If creating the post fails, the server deletes the uploaded
- * files and the originals are still here, so Post can simply be pressed again.
+ * green when done. If it fails, the server deletes any uploaded files and the
+ * bar offers Try again (the provider keeps the text and files until then).
  *
  * Deviations: "Subscribers" and Drafts, video and link are disabled (Coming
  * soon), so "Everyone" is the only audience. Alt text has no field in the
@@ -44,11 +44,10 @@ export interface CreatePostFormProps {
 
 function CreatePostForm({ name, avatarUrl }: CreatePostFormProps) {
   const router = useRouter()
-  const { toast, update, dismiss } = useToast()
+  const { start: startUpload } = usePostUpload()
   const [body, setBody] = React.useState("")
   const [picked, setPicked] = React.useState<Picked[]>([])
   const [error, setError] = React.useState("")
-  const [submitting, setSubmitting] = React.useState(false)
   const libraryInput = React.useRef<HTMLInputElement>(null)
   const cameraInput = React.useRef<HTMLInputElement>(null)
   const pickedRef = React.useRef<Picked[]>([])
@@ -91,60 +90,17 @@ function CreatePostForm({ name, avatarUrl }: CreatePostFormProps) {
     })
   }
 
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (submitting) return
     const text = body.trim()
     if (text.length === 0 && picked.length === 0) {
       setError("Write something or add an image.")
       return
     }
-
     setError("")
-    setSubmitting(true)
-    const toastId = toast({ title: "Your post is being uploaded", progress: 10, duration: null })
-    const fail = (message: string) => {
-      dismiss(toastId)
-      setError(message)
-      toast({ variant: "error", title: message })
-      setSubmitting(false)
-    }
-
-    try {
-      let images: { url: string; width: number; height: number; altText: string }[] = []
-
-      if (picked.length > 0) {
-        const form = new FormData()
-        picked.forEach((item) => form.append("files", item.file))
-        const response = await fetch("/api/upload", { method: "POST", body: form })
-        if (response.status === 401) {
-          dismiss(toastId)
-          router.push("/sign-in?next=/create")
-          return
-        }
-        const data = (await response.json().catch(() => null)) as
-          | { files?: { url: string; width: number; height: number }[]; message?: string }
-          | null
-        if (!response.ok || !data?.files) return fail(data?.message ?? "Upload failed. Try again.")
-        images = data.files.map((file) => ({ ...file, altText: "" }))
-      }
-      update(toastId, { progress: 70 })
-
-      const result = await createPostAction({ body: text, images })
-      if (!result.ok) {
-        if (result.error === "unauthorized") {
-          dismiss(toastId)
-          router.push("/sign-in?next=/create")
-          return
-        }
-        return fail(result.message)
-      }
-
-      update(toastId, { variant: "success", title: "Your post was successfully uploaded", progress: 100 })
-      router.push("/feed")
-    } catch {
-      fail("Something went wrong. Check your connection and try again.")
-    }
+    // The upload continues on the feed (see PostUploadBanner), so close the composer now.
+    startUpload({ body: text, files: picked.map((item) => item.file) })
+    router.push("/feed")
   }
 
   const tool = "text-textSecondary [&_svg:not([class*='size-'])]:size-5"
@@ -152,7 +108,8 @@ function CreatePostForm({ name, avatarUrl }: CreatePostFormProps) {
 
   return (
     <form id="create-post" onSubmit={onSubmit} className="flex flex-1 flex-col" noValidate>
-      <TopNavbar variant="post" closeHref="/feed" formId="create-post" submitting={submitting} />
+      <TopNavbar variant="post" closeHref="/feed" formId="create-post" canPost={body.trim().length > 0 || picked.length > 0}
+      />
 
       <fieldset className="flex flex-col gap-2.5 px-5 py-2.5">
         <legend className="mb-2.5 text-caption text-textPrimary">Who can see this?</legend>
@@ -176,7 +133,7 @@ function CreatePostForm({ name, avatarUrl }: CreatePostFormProps) {
             onChange={(event) => setBody(event.target.value)}
             maxLength={POST_BODY_MAX}
             placeholder="What have you been working on?"
-            className="min-h-11 resize-none border-transparent px-2 py-2 text-caption [field-sizing:content]"
+            className="min-h-11 resize-none border-transparent px-2 py-2 text-caption [field-sizing:content] focus-visible:border-transparent focus-visible:ring-0"
             rows={2}
             aria-describedby="post-hint"
           />
@@ -207,7 +164,6 @@ function CreatePostForm({ name, avatarUrl }: CreatePostFormProps) {
               <button
                 type="button"
                 onClick={() => removeImage(item.id)}
-                disabled={submitting}
                 aria-label={`Remove image ${index + 1}`}
                 className="absolute top-1 right-1 flex size-11 items-center justify-center rounded-full text-textPrimary outline-none focus-visible:ring-2 focus-visible:ring-accentDefault"
               >
@@ -255,7 +211,7 @@ function CreatePostForm({ name, avatarUrl }: CreatePostFormProps) {
           size="icon"
           aria-label="Take a photo"
           className={tool}
-          disabled={submitting || picked.length >= POST_MAX_IMAGES}
+          disabled={picked.length >= POST_MAX_IMAGES}
           onClick={() => cameraInput.current?.click()}
         >
           <Camera aria-hidden="true" />
@@ -266,7 +222,7 @@ function CreatePostForm({ name, avatarUrl }: CreatePostFormProps) {
           size="icon"
           aria-label="Add images"
           className={tool}
-          disabled={submitting || picked.length >= POST_MAX_IMAGES}
+          disabled={picked.length >= POST_MAX_IMAGES}
           onClick={() => libraryInput.current?.click()}
         >
           <ImagesSquare aria-hidden="true" />
