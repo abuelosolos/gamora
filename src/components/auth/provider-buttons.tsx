@@ -62,7 +62,7 @@ function GoogleButton({ next, className }: { next: string; className?: string })
 }
 
 /**
- * Apple sign-in is not set up. Disabled: the Button's disabled fill (bgSurface)
+ * Apple sign-in is not set up. Disabled: the textDisabled token as fill
  * with textSecondary for the logo and label. No badge, no label change.
  */
 function AppleButton({ className }: { className?: string }) {
@@ -72,7 +72,7 @@ function AppleButton({ className }: { className?: string }) {
       disabled
       className={cn(
         AUTH_BUTTON_CLASS,
-        "disabled:bg-bgSurface disabled:text-textSecondary",
+        "disabled:bg-textDisabled disabled:text-textSecondary",
         className
       )}
     >
