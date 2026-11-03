@@ -7,6 +7,9 @@ export type JobTypeValue = z.infer<typeof jobTypeSchema>
 /** The wall filter: one job type, or nothing for All. Anything else is ignored. */
 export const jobFilterSchema = jobTypeSchema.optional().catch(undefined)
 
+export const JOB_MEDIUMS = ["digital", "traditional", "sculpture", "paper", "mixed"] as const
+export type JobMediumValue = (typeof JOB_MEDIUMS)[number]
+
 export const jobIdSchema = z.uuid()
 
 export const APPLY_MAX_PIECES = 4

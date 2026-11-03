@@ -30,6 +30,13 @@ export function useOptimisticFlag(initial: FlagState, request: (on: boolean) => 
   const [pending, setPending] = React.useState(false)
   const busy = React.useRef(false)
 
+  // A refresh (pull down) can bring new numbers from the server: take them, unless a press is in flight.
+  const [seen, setSeen] = React.useState(initial)
+  if (seen.on !== initial.on || seen.count !== initial.count) {
+    setSeen(initial)
+    if (!pending) setState(initial)
+  }
+
   const toggle = React.useCallback(async () => {
     if (busy.current) return
     busy.current = true

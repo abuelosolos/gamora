@@ -3,9 +3,10 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { DotsThreeVertical, GearSix, Info, PaintBrush, SignOut } from "@/components/icons"
+import { DotsThreeVertical, GearSix, Info, PaintBrush, ProhibitInset, SignOut } from "@/components/icons"
 import { TopBarButton } from "@/components/layout/top-bar"
 import { ReportSheet } from "@/components/report/report-sheet"
+import { BlockDialog } from "@/components/shared/block-dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/toast"
 import { authClient } from "@/lib/auth-client"
@@ -31,6 +32,7 @@ function ProfileMenu({ isOwner, username }: ProfileMenuProps) {
   const { toast } = useToast()
   const [signingOut, setSigningOut] = React.useState(false)
   const [reporting, setReporting] = React.useState(false)
+  const [blocking, setBlocking] = React.useState(false)
 
   async function logOut() {
     if (signingOut) return
@@ -82,14 +84,31 @@ function ProfileMenu({ isOwner, username }: ProfileMenuProps) {
           </>
         ) : (
           // TODO(icon): Flag is not in src/components/icons yet, so Report has no icon.
-          <DropdownMenuItem className={itemClass} onSelect={() => setReporting(true)}>
-            Report
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuItem className={itemClass} onSelect={() => setReporting(true)}>
+              Report
+            </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" className={itemClass} onSelect={() => setBlocking(true)}>
+              <ProhibitInset aria-hidden="true" />
+              Block @{username}
+            </DropdownMenuItem>
+          </>
         )}
       </DropdownMenuContent>
       </DropdownMenu>
       {isOwner ? null : (
-        <ReportSheet open={reporting} onOpenChange={setReporting} target={{ type: "profile", username }} noun="profile" />
+        <>
+          <ReportSheet open={reporting} onOpenChange={setReporting} target={{ type: "profile", username }} noun="profile" />
+          <BlockDialog
+            open={blocking}
+            onOpenChange={setBlocking}
+            username={username}
+            onBlocked={() => {
+              router.replace("/feed")
+              router.refresh()
+            }}
+          />
+        </>
       )}
     </>
   )

@@ -1,5 +1,5 @@
 import "server-only"
-import { and, asc, count, desc, eq, isNotNull, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { db } from "@/server/db"
 import {
@@ -13,6 +13,7 @@ import {
   reposts,
   user,
 } from "@/server/db/schema"
+import { isBlockedEither, notBlockedWith } from "@/server/services/blocks"
 import { attachImages, decodeCursor, encodeCursor, postColumns, type PostView } from "@/server/services/posts"
 import {
   ACTIVITY_PAGE_SIZE,
@@ -73,6 +74,8 @@ export async function setPostFlag(
 ): Promise<SetFlagResult> {
   const authorId = await authorOf(postId)
   if (!authorId) return { found: false }
+  // Blocked either way: the post is "not found". Undoing (on = false) stays allowed.
+  if (on && authorId !== userId && (await isBlockedEither(userId, authorId))) return { found: false }
 
   const table = flagTables[kind] as typeof likes
   const notifyType = kind === "like" ? "like" : kind === "repost" ? "repost" : null
@@ -112,6 +115,7 @@ export async function setFollow(followerId: string, username: string, on: boolea
     .limit(1)
   if (!target) return { found: false }
   if (target.userId === followerId) return { found: true, self: true }
+  if (on && (await isBlockedEither(followerId, target.userId))) return { found: false }
 
   if (on) {
     const inserted = await db
@@ -159,6 +163,7 @@ export async function createReply(
 ): Promise<{ found: false } | { found: true; reply: PostView; replyCount: number }> {
   const authorId = await authorOf(postId)
   if (!authorId) return { found: false }
+  if (authorId !== userId && (await isBlockedEither(userId, authorId))) return { found: false }
 
   const id = crypto.randomUUID()
   const insertReply = db.insert(posts).values({ id, authorId: userId, body, parentId: postId })
@@ -219,7 +224,7 @@ export async function listReplies(params: {
     .from(posts)
     .innerJoin(user, eq(user.id, posts.authorId))
     .innerJoin(profile, eq(profile.userId, posts.authorId))
-    .where(and(eq(posts.parentId, params.postId), after))
+    .where(and(eq(posts.parentId, params.postId), after, notBlockedWith(params.viewerId, posts.authorId)))
     .orderBy(asc(posts.createdAt), asc(posts.id))
     .limit(REPLIES_PAGE_SIZE + 1)
 
@@ -292,7 +297,14 @@ export async function listNotifications(params: {
     .leftJoin(posts, eq(posts.id, notifications.postId))
     .leftJoin(postImages, and(eq(postImages.postId, posts.id), eq(postImages.position, 0)))
     .leftJoin(replyPost, eq(replyPost.id, notifications.replyId))
-    .where(and(eq(notifications.recipientId, params.viewerId), byType, after))
+    .where(
+      and(
+        eq(notifications.recipientId, params.viewerId),
+        byType,
+        after,
+        notBlockedWith(params.viewerId, notifications.actorId)
+      )
+    )
     .orderBy(desc(notifications.createdAt), desc(notifications.id))
     .limit(ACTIVITY_PAGE_SIZE + 1)
 
@@ -312,4 +324,27 @@ export async function listNotifications(params: {
     })),
     nextCursor: hasMore && last ? encodeCursor(last.createdAtText, last.id) : null,
   }
+}
+
+/** How many of the viewer's notifications are still unread (blocked people excluded, like the list). */
+export async function countUnreadNotifications(viewerId: string): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.recipientId, viewerId),
+        isNull(notifications.readAt),
+        notBlockedWith(viewerId, notifications.actorId)
+      )
+    )
+  return row?.n ?? 0
+}
+
+/** Marks everything the viewer has not read as read. Only touches the viewer's own rows. */
+export async function markNotificationsRead(viewerId: string): Promise<void> {
+  await db
+    .update(notifications)
+    .set({ readAt: new Date() })
+    .where(and(eq(notifications.recipientId, viewerId), isNull(notifications.readAt)))
 }

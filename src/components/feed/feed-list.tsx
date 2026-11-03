@@ -2,7 +2,10 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { NewPostsPill } from "@/components/feed/new-posts-pill"
 import { PostCard, PostCardSkeleton } from "@/components/feed/post-card"
+import { useNewPosts } from "@/components/feed/use-new-posts"
 import { Plus } from "@/components/icons"
 import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
@@ -35,6 +38,34 @@ function FeedList({ source, initial }: FeedListProps) {
   const [errorMessage, setErrorMessage] = React.useState("")
   const sentinel = React.useRef<HTMLDivElement>(null)
   const busy = React.useRef(false)
+  const router = useRouter()
+  const [, startRefresh] = React.useTransition()
+  const newPosts = useNewPosts({
+    enabled: source.kind === "feed",
+    tab: source.kind === "feed" ? source.tab : "for-you",
+    genres: source.kind === "feed" ? source.genres : undefined,
+    topPostId: items[0]?.id ?? null,
+  })
+
+  // Pill pressed: back to the top and fetch the feed again (the list takes the new first page).
+  const showNewPosts = React.useCallback(() => {
+    const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const behavior = smooth ? "smooth" : "instant"
+    window.scrollTo({ top: 0, behavior })
+    document.querySelector('[data-slot="phone-frame"]')?.scrollTo({ top: 0, behavior })
+    startRefresh(() => router.refresh())
+  }, [router])
+
+  // A refresh (pull down, or router.refresh) brings a new first page from the server: show it.
+  const lastInitial = React.useRef(initial)
+  React.useEffect(() => {
+    if (lastInitial.current === initial) return
+    lastInitial.current = initial
+    setItems(initial.items)
+    setCursor(initial.nextCursor)
+    setStatus("idle")
+    setErrorMessage("")
+  }, [initial])
 
   const loadMore = React.useCallback(async () => {
     if (busy.current || !cursor) return
@@ -136,6 +167,7 @@ function FeedList({ source, initial }: FeedListProps) {
 
   return (
     <>
+      {newPosts ? <NewPostsPill found={newPosts} onPress={showNewPosts} /> : null}
       <ul className="flex flex-col">
         {items.map((post) => (
           <li key={itemKey(post)}>
@@ -162,7 +194,7 @@ function FeedList({ source, initial }: FeedListProps) {
       ) : null}
 
       {!cursor ? (
-        <p className="px-5 py-6 text-center text-caption text-textSecondary">You are all caught up.</p>
+        <p className="px-5 py-6 text-center text-caption text-textSecondary">You have doomscrolled to the end.</p>
       ) : null}
     </>
   )

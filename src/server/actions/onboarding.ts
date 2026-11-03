@@ -3,7 +3,7 @@
 import { env } from "@/lib/env.server"
 import { safeNextPath } from "@/lib/safe-redirect"
 import { requireUserForAction } from "@/server/auth/session"
-import { withinRateLimits } from "@/server/security/rate-limit"
+import { clientIp, withinRateLimits } from "@/server/security/rate-limit"
 import { isOwnAvatarUrl } from "@/server/storage/blob-urls"
 import { processAvatar, storeAvatar } from "@/server/storage/process-image"
 import {
@@ -27,8 +27,9 @@ export type UsernameCheck =
 
 /** Live check while typing. Usernames are public, so "taken" is not a secret. */
 export async function checkUsernameAction(raw: string): Promise<UsernameCheck> {
+  // Also used before the account exists (sign-up wizard), so signed-out callers
+  // are allowed and limited by IP instead of by user.
   const session = await requireUserForAction()
-  if (!session.ok) return { status: "error", message: "Sign in to continue." }
 
   const parsed = usernameSchema.safeParse(raw)
   if (!parsed.success) {
@@ -36,7 +37,7 @@ export async function checkUsernameAction(raw: string): Promise<UsernameCheck> {
   }
 
   const allowed = await withinRateLimits([
-    { name: "username-check", key: session.user.id, limit: 40, windowSeconds: 60 },
+    { name: "username-check", key: session.ok ? session.user.id : `ip:${await clientIp()}`, limit: 40, windowSeconds: 60 },
   ])
   if (!allowed) return { status: "error", message: "Slow down and try again in a moment." }
 

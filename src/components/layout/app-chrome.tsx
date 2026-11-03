@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation"
 import { BottomNav } from "@/components/layout/bottom-nav"
 import { PostButton } from "@/components/layout/post-button"
+import { useUnreadCount } from "@/components/layout/use-unread-count"
 
 /**
  * Which floating pieces each screen shows. From the Figma frames:
@@ -38,15 +39,24 @@ function chromeFor(pathname: string): Chrome {
  * ignores pointer events, so only the nav and the button are clickable.
  */
 function AppChrome() {
-  const { nav, postButton } = chromeFor(usePathname())
+  const pathname = usePathname()
+  const { nav, postButton } = chromeFor(pathname)
+  // Looking at Activity counts as seeing it: no badge there, and no polling.
+  const unread = useUnreadCount({ paused: !nav || pathname.startsWith("/activity") })
   if (!nav && !postButton) return null
 
   return (
-    <div className="pointer-events-none sticky bottom-4 z-10 mt-auto flex flex-col items-end">
+    <div className={`pointer-events-none sticky z-10 mt-auto flex flex-col items-end ${nav ? "bottom-0" : "bottom-4"}`}>
       {postButton ? (
         <PostButton className={`pointer-events-auto mr-5.5 ${postButton === "above-nav" ? "mb-3.75" : "mb-12"}`} />
       ) : null}
-      {nav ? <BottomNav className="pointer-events-auto w-full" /> : null}
+      {nav ? (
+        <div className="pointer-events-auto relative w-full pb-4">
+          {/* Fill in the page colour behind the lower half of the nav and the gap under it, so nothing shows past the rounded corners. Adds no size. */}
+          <div aria-hidden="true" className="absolute inset-x-0 top-1/2 bottom-0 bg-bgDefault" />
+          <BottomNav className="relative w-full" activityBadge={unread} />
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -16,6 +16,16 @@ function BookmarkList({ initial }: { initial: FeedPage }) {
   const [status, setStatus] = React.useState<"idle" | "loading" | "error">("idle")
   const [errorMessage, setErrorMessage] = React.useState("")
 
+  // A refresh (pull down) hands over a new first page: show it.
+  const [seenInitial, setSeenInitial] = React.useState(initial)
+  if (seenInitial !== initial) {
+    setSeenInitial(initial)
+    setItems(initial.items)
+    setCursor(initial.nextCursor)
+    setStatus("idle")
+    setErrorMessage("")
+  }
+
   async function loadMore() {
     if (!cursor || status === "loading") return
     setStatus("loading")

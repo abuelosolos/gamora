@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import { ActivityHighlights } from "@/components/activity/activity-highlights"
 import { ActivityFilters } from "@/components/activity/activity-filters"
 import { ActivityList } from "@/components/activity/activity-list"
 import { NotificationSkeleton } from "@/components/activity/notification-item"
@@ -14,9 +15,12 @@ export const metadata = { title: "Activity" }
 
 export default function ActivityPage({ searchParams }: PageProps<"/activity">) {
   return (
-    <Suspense fallback={<ActivityFallback />}>
-      <ActivityContent searchParams={searchParams} />
-    </Suspense>
+    // The highlights live outside Suspense so they survive a refresh or a filter change.
+    <ActivityHighlights>
+      <Suspense fallback={<ActivityFallback />}>
+        <ActivityContent searchParams={searchParams} />
+      </Suspense>
+    </ActivityHighlights>
   )
 }
 

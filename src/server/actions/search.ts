@@ -32,7 +32,7 @@ export async function searchPeopleAction(input: unknown): Promise<SearchResult> 
   if (!allowed) return { ok: false, error: "rate_limited", message: "Slow down and try again in a moment." }
 
   try {
-    return { ok: true, people: await searchPeople(parsed.data) }
+    return { ok: true, people: await searchPeople(parsed.data, session.user.id) }
   } catch (error) {
     console.error("[search] failed", error instanceof Error ? error.message : "unknown")
     return { ok: false, error: "server", message: "Search is not working right now. Try again." }

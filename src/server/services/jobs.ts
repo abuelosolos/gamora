@@ -4,7 +4,7 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm"
 import { db } from "@/server/db"
 import { jobApplicationPosts, jobApplications, jobs, postImages, posts } from "@/server/db/schema"
 import { isUniqueViolation } from "@/server/services/profile"
-import type { JobTypeValue } from "@/server/validators/jobs"
+import type { JobMediumValue, JobTypeValue } from "@/server/validators/jobs"
 
 /** What a page may show about a job. Poster is a name only (there are no hirer accounts). */
 export interface JobView {
@@ -22,6 +22,12 @@ export interface JobView {
 
 export interface JobDetail extends JobView {
   description: string
+  category: string
+  medium: JobMediumValue
+  artStyles: string[]
+  deliverables: string[]
+  requirements: string[]
+  timeline: string
   /** True when the signed-in viewer already applied. Decided here, never by the client. */
   applied: boolean
 }
@@ -57,7 +63,16 @@ export async function listJobs(type: JobTypeValue | undefined): Promise<JobView[
 
 export async function getJob(id: string, viewerId: string): Promise<JobDetail | null> {
   const [row] = await db
-    .select({ ...jobColumns, description: jobs.description })
+    .select({
+      ...jobColumns,
+      description: jobs.description,
+      category: jobs.category,
+      medium: jobs.medium,
+      artStyles: jobs.artStyles,
+      deliverables: jobs.deliverables,
+      requirements: jobs.requirements,
+      timeline: jobs.timeline,
+    })
     .from(jobs)
     .where(eq(jobs.id, id))
     .limit(1)
@@ -69,7 +84,7 @@ export async function getJob(id: string, viewerId: string): Promise<JobDetail | 
     .where(and(eq(jobApplications.jobId, id), eq(jobApplications.applicantId, viewerId)))
     .limit(1)
 
-  return { ...toView(row), description: row.description, applied: Boolean(existing) }
+  return { ...toView(row), ...row, createdAt: row.createdAt.toISOString(), applied: Boolean(existing) }
 }
 
 /** A work the artist can attach: one of their own posts that has at least one image. */

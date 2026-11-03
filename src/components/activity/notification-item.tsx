@@ -4,6 +4,7 @@ import Link from "next/link"
 import { ArrowsClockwise, ChatCircleFill, HeartFill, UserFill } from "@/components/icons"
 import { Avatar } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 import { formatRelativeTime } from "@/lib/format-relative-time"
 import type { NotificationView } from "@/server/services/interactions"
 
@@ -28,14 +29,14 @@ const TYPES = {
   follow: { text: "followed you", icon: UserFill, tone: "text-accentDefault" },
 } as const
 
-function NotificationItem({ notification }: { notification: NotificationView }) {
+function NotificationItem({ notification, highlighted = false }: { notification: NotificationView; highlighted?: boolean }) {
   const { actor, post, type } = notification
   const { text, icon: Icon, tone } = TYPES[type]
   const href = type === "follow" || !post ? `/u/${actor.username}` : `/post/${post.id}${type === "comment" ? "#replies" : ""}`
   const preview = type === "comment" ? notification.replyBody : post?.body
 
   return (
-    <li className="border-b border-borderDefault">
+    <li className={cn("border-b border-borderDefault", highlighted && "bg-accentSubtle")}>
       <Link
         href={href}
         className="flex flex-col gap-2 p-5 outline-none hover:bg-bgSurface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accentDefault"
@@ -48,7 +49,7 @@ function NotificationItem({ notification }: { notification: NotificationView }) 
         </span>
         <span className="flex flex-col">
           <span className="text-body font-medium text-textPrimary">
-            {notification.unread ? <span className="sr-only">Unread. </span> : null}
+            {highlighted ? <span className="sr-only">Unread. </span> : null}
             {actor.username} {text}
           </span>
           <time dateTime={notification.createdAt} suppressHydrationWarning className="text-body-sm text-textSecondary">

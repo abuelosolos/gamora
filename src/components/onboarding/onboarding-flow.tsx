@@ -15,6 +15,7 @@ import {
   completeOnboardingAction,
   uploadAvatarAction,
 } from "@/server/actions/onboarding"
+import { registerAccountAction } from "@/server/actions/auth"
 import { AVATAR_MAX_BYTES, AVATAR_TYPES, nameSchema, usernameSchema } from "@/server/validators/profile"
 
 /**
@@ -42,9 +43,15 @@ type UsernameCheckResult = { value: string; state: UsernameState }
 export interface OnboardingFlowProps {
   /** Already validated with safeNextPath on the server. */
   next: string
+  /**
+   * Sign-up mode: the account does not exist yet. The email and password wait in
+   * memory, nothing is saved until the last step, and then one action creates the
+   * account and the profile. `onExit` returns to the password screen.
+   */
+  signup?: { email: string; password: string; onExit: () => void }
 }
 
-function OnboardingFlow({ next }: OnboardingFlowProps) {
+function OnboardingFlow({ next, signup }: OnboardingFlowProps) {
   const router = useRouter()
   const [step, setStep] = React.useState<Step>("role")
 
@@ -57,6 +64,7 @@ function OnboardingFlow({ next }: OnboardingFlowProps) {
 
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null)
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null)
+  const [avatarFile, setAvatarFile] = React.useState<File | null>(null)
   const [avatarBusy, setAvatarBusy] = React.useState(false)
   const [avatarError, setAvatarError] = React.useState<string | null>(null)
 
@@ -108,7 +116,7 @@ function OnboardingFlow({ next }: OnboardingFlowProps) {
   }, [avatarPreview])
 
   const stepIndex = STEPS.indexOf(step)
-  const goBack = stepIndex > 0 ? () => setStep(STEPS[stepIndex - 1]!) : undefined
+  const goBack = stepIndex > 0 ? () => setStep(STEPS[stepIndex - 1]!) : signup?.onExit
   const goNext = () => setStep(STEPS[stepIndex + 1]!)
 
   async function pickAvatar(file: File) {
@@ -123,6 +131,11 @@ function OnboardingFlow({ next }: OnboardingFlowProps) {
     }
     setAvatarPreview(URL.createObjectURL(file))
     setAvatarUrl(null)
+    if (signup) {
+      // No account yet, so nothing can be uploaded. The file goes up with the final step.
+      setAvatarFile(file)
+      return
+    }
     setAvatarBusy(true)
     const body = new FormData()
     body.set("avatar", file)
@@ -153,6 +166,32 @@ function OnboardingFlow({ next }: OnboardingFlowProps) {
   function finish(chosen: Interest[] = interests) {
     setSubmitError(null)
     startSubmit(async () => {
+      if (signup) {
+        const body = new FormData()
+        body.set("email", signup.email)
+        body.set("password", signup.password)
+        body.set("next", next)
+        body.set("firstName", firstName)
+        body.set("lastName", lastName)
+        body.set("middleName", middleName)
+        body.set("username", username)
+        body.set("interests", JSON.stringify(chosen))
+        if (avatarFile) body.set("avatar", avatarFile)
+        try {
+          // Success redirects (the call does not return); a result means it failed.
+          const failed = await registerAccountAction(body)
+          if (!failed) return
+          setSubmitError(failed.error ?? "Something went wrong. Try again.")
+          if (failed.field === "username") {
+            if (checkedValue) setUsernameResult({ value: checkedValue, state: { status: "taken" } })
+            setStep("username")
+          } else if (failed.field === "name") setStep("name")
+          else if (failed.field === "account") signup.onExit()
+        } catch {
+          setSubmitError("Something went wrong. Try again.")
+        }
+        return
+      }
       let result
       try {
         result = await completeOnboardingAction({
@@ -286,10 +325,11 @@ function OnboardingFlow({ next }: OnboardingFlowProps) {
           <>
             {skip(() => {
               setAvatarUrl(null)
+              setAvatarFile(null)
               setAvatarPreview(null)
               goNext()
             })}
-            {primary("Continue", goNext, !avatarUrl || avatarBusy)}
+            {primary("Continue", goNext, (signup ? !avatarFile : !avatarUrl) || avatarBusy)}
           </>
         }
       >

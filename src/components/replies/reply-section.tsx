@@ -46,6 +46,16 @@ function ReplySection({ postId, initial, initialCount, viewer }: ReplySectionPro
   const [more, setMore] = React.useState<"idle" | "loading" | "error">("idle")
   const sendBusy = React.useRef(false)
 
+  // A refresh (pull down) hands over new replies and a new count: show them.
+  const [seenInitial, setSeenInitial] = React.useState(initial)
+  if (seenInitial !== initial) {
+    setSeenInitial(initial)
+    setItems(initial.items)
+    setCursor(initial.nextCursor)
+    setCount(initialCount)
+    setMore("idle")
+  }
+
   const trimmed = draft.trim()
   const tooLong = trimmed.length > REPLY_BODY_MAX
   // The counter only appears when the limit is near, so the box stays one line tall.

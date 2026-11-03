@@ -22,6 +22,9 @@ import { posts } from "./posts";
  */
 export const jobType = pgEnum("job_type", ["full_time", "part_time", "contract", "freelance"]);
 
+/** What the work is made of: digital files, traditional (paint, ink), a sculpture, paper craft, or a mix. */
+export const jobMedium = pgEnum("job_medium", ["digital", "traditional", "sculpture", "paper", "mixed"]);
+
 export const jobs = pgTable(
   "jobs",
   {
@@ -33,6 +36,26 @@ export const jobs = pgTable(
     summary: text("summary").notNull(),
     /** Longer text shown on the job page. */
     description: text("description").notNull(),
+    /** What kind of work it is ("Book cover", "Character design"). Free text from a fixed list in lib/format-job. */
+    category: text("category").notNull().default(""),
+    medium: jobMedium("medium").notNull().default("digital"),
+    /** Looks the hirer wants ("Pixel art", "Flat colour"), up to 6. */
+    artStyles: text("art_styles")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** What the artist hands over, one item per line on the page. */
+    deliverables: text("deliverables")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** What the hirer is looking for in the artist. */
+    requirements: text("requirements")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** How long it takes ("6 weeks, one cover every two weeks"). */
+    timeline: text("timeline").notNull().default(""),
     posterName: text("poster_name").notNull(),
     jobType: jobType("job_type").notNull(),
     /** Whole US dollars, paid per `pay_unit` ("Cover", "Illustration"). */
@@ -46,6 +69,7 @@ export const jobs = pgTable(
     index("jobs_created_at_idx").on(table.createdAt.desc(), table.id.desc()),
     index("jobs_type_idx").on(table.jobType, table.createdAt.desc()),
     check("jobs_pay_positive", sql`${table.payAmount} > 0`),
+    check("jobs_art_styles_max", sql`cardinality(${table.artStyles}) <= 6`),
     check("jobs_title_length", sql`char_length(${table.title}) <= 120`),
   ],
 );

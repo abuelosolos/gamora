@@ -13,7 +13,9 @@ import type { PostView } from "@/server/services/posts"
  *   feed:   one image fills the width and keeps its own shape, limited to
  *           FEED_IMAGE_MIN_RATIO..FEED_IMAGE_MAX_RATIO (width / height); several
  *           scroll sideways as 150x196 tiles.
- *   detail: the post page, images stacked at their own ratio.
+ *   detail: the post page. One image at its own ratio, full width; several
+ *           flow sideways (swipe or scroll right), each at its own shape, with
+ *           the next one peeking in.
  *
  * Pressing any picture opens it full screen in the ImageViewer (zoom, menu and
  * actions). Pictures are buttons, not links; the text, avatar and header still
@@ -48,7 +50,37 @@ function PostImages({ post, variant, onDeleted, redirectTo, noun }: PostImagesPr
   const open = (index: number) => () => setViewing(index)
 
   let content: React.ReactNode
-  if (variant === "detail") {
+  if (variant === "detail" && images.length > 1) {
+    content = (
+      // Sideways scroll, never stacked downward. tabIndex lets keyboard users scroll it.
+      <div
+        role="group"
+        aria-label={`${images.length} images`}
+        tabIndex={0}
+        className={cn("-mx-5 flex snap-x snap-mandatory items-start gap-2.5 overflow-x-auto px-5 py-2.5 scroll-px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", focusRing)}
+      >
+        {images.map((image, index) => (
+          <button
+            key={image.id}
+            type="button"
+            aria-haspopup="dialog"
+            onClick={open(index)}
+            className={cn(tile, "block w-4/5 shrink-0 snap-start", focusRing)}
+            style={{ aspectRatio: feedImageRatio(image.width, image.height) }}
+          >
+            <Image
+              src={image.url}
+              alt={alt(image)}
+              fill
+              sizes="(min-width: 768px) 312px, 80vw"
+              priority={index === 0}
+              className="object-cover"
+            />
+          </button>
+        ))}
+      </div>
+    )
+  } else if (variant === "detail") {
     content = (
       <div className="flex flex-col gap-2.5 py-2.5">
         {images.map((image, index) => (
@@ -89,7 +121,7 @@ function PostImages({ post, variant, onDeleted, redirectTo, noun }: PostImagesPr
         role="group"
         aria-label={`${images.length} images`}
         tabIndex={0}
-        className={cn("-mx-5 flex snap-x gap-2.5 overflow-x-auto px-5 py-2.5", focusRing)}
+        className={cn("-mx-5 flex snap-x gap-2.5 overflow-x-auto px-5 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", focusRing)}
       >
         {images.map((image, index) => (
           <button

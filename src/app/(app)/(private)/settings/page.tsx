@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import { redirect } from "next/navigation"
-import { Bell, Info, Key, PaintBrush, User } from "@/components/icons"
+import { Bell, Info, Key, ProhibitInset, User } from "@/components/icons"
 import { TopNavbar } from "@/components/layout/top-navbar"
 import { SettingsRow, SettingsSection } from "@/components/settings/settings-list"
 import { Avatar } from "@/components/ui/avatar"
@@ -40,13 +40,16 @@ async function SettingsContent() {
 
       <SettingsSection title="Personalization">
         <SettingsRow icon={<User />} label="Edit profile" href="/settings/profile" />
-        <SettingsRow icon={<PaintBrush />} label="Appearance" href="/settings/appearance" />
         <SettingsRow icon={<Bell />} label="Notifications" soon />
       </SettingsSection>
 
       <SettingsSection title="Security">
         <SettingsRow icon={<Key />} label="Change password" soon />
         <SettingsRow icon={<User />} label="Account" href="/settings/account" />
+      </SettingsSection>
+
+      <SettingsSection title="Privacy">
+        <SettingsRow icon={<ProhibitInset />} label="Blocked users" href="/settings/blocked" />
       </SettingsSection>
 
       <SettingsSection title="Wallet">
@@ -72,8 +75,8 @@ function SettingsFallback() {
           <Skeleton className="h-3 w-20" />
         </div>
       </div>
-      {["h-42", "h-28", "h-14", "h-28"].map((height) => (
-        <div key={height} className="flex flex-col gap-2.5 px-5 py-2.5">
+      {["h-28", "h-28", "h-14", "h-14", "h-28"].map((height, index) => (
+        <div key={index} className="flex flex-col gap-2.5 px-5 py-2.5">
           <Skeleton className="h-3 w-24" />
           <Skeleton className={`${height} w-full`} />
         </div>
