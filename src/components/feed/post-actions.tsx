@@ -11,11 +11,10 @@ import {
   HeartFill,
   ShareNetwork,
 } from "@/components/icons"
-import { useOptimisticFlag } from "@/components/feed/use-optimistic-flag"
+import { usePostInteractions } from "@/components/feed/post-interactions"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import { cn } from "@/lib/utils"
-import { setBookmarkAction, setLikeAction, setRepostAction } from "@/server/actions/interactions"
 import type { PostView } from "@/server/services/posts"
 
 /**
@@ -23,8 +22,10 @@ import type { PostView } from "@/server/services/posts"
  * and share on the right. Counts sit next to the icon in the caption style.
  *
  * Likes, bookmarks and reposts are optimistic and roll back on failure (see
- * useOptimisticFlag). Reply opens the post page at the replies. Share
- * copies the link to the post.
+ * useOptimisticFlag); their state comes from PostInteractionsProvider so the
+ * card and the image viewer stay in step. Reply opens the post page at the
+ * replies (`onReply` lets the image viewer close itself first). Share copies
+ * the link to the post.
  *
  * Deviation from the design: there is no filled repost icon in the icon set,
  * so an active repost is shown in accentDefault instead.
@@ -36,21 +37,9 @@ function Count({ value }: { value: number }) {
   return value > 0 ? <span aria-hidden="true">{value}</span> : null
 }
 
-function PostActions({ post }: { post: PostView }) {
+function PostActions({ post, onReply }: { post: PostView; onReply?: () => void }) {
   const { toast } = useToast()
-
-  const like = useOptimisticFlag({ on: post.viewer.liked, count: post.likeCount }, async (on) => {
-    const result = await setLikeAction({ postId: post.id, on })
-    return result.ok ? { ok: true, on: result.on, count: result.likeCount } : result
-  })
-  const repost = useOptimisticFlag({ on: post.viewer.reposted, count: post.repostCount }, async (on) => {
-    const result = await setRepostAction({ postId: post.id, on })
-    return result.ok ? { ok: true, on: result.on, count: result.repostCount } : result
-  })
-  const bookmark = useOptimisticFlag({ on: post.viewer.bookmarked, count: 0 }, async (on) => {
-    const result = await setBookmarkAction({ postId: post.id, on })
-    return result.ok ? { ok: true, on: result.on, count: 0 } : result
-  })
+  const { like, repost, bookmark } = usePostInteractions()
 
   async function copyLink() {
     const url = `${window.location.origin}/post/${post.id}`
@@ -85,6 +74,7 @@ function PostActions({ post }: { post: PostView }) {
         >
           <Link
             href={`/post/${post.id}#replies`}
+            onClick={onReply}
             aria-label={`Replies, ${post.replyCount} ${post.replyCount === 1 ? "reply" : "replies"}`}
           >
             <ChatCircle aria-hidden="true" />

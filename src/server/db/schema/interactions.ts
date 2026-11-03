@@ -31,6 +31,8 @@ export const likes = pgTable(
   (table) => [
     primaryKey({ name: "likes_user_post_pk", columns: [table.userId, table.postId] }),
     index("likes_post_idx").on(table.postId),
+    // A user's likes, newest first (profile Likes and Activity).
+    index("likes_user_idx").on(table.userId, table.createdAt.desc()),
   ],
 );
 

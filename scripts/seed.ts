@@ -4,7 +4,8 @@
  *   npm run db:seed
  *
  * Every demo profile has a bio that starts with "DEMO ACCOUNT" and a username
- * ending in "_demo". The names are made up and do not refer to real people.
+ * ending in "_demo", every demo post starts with "Sample post.", and every job
+ * is flagged is_sample (shown with a Sample badge). The names are made up and do not refer to real people.
  * The demo users have no password and no account row, so nobody can sign in as
  * them.
  *
@@ -318,7 +319,8 @@ async function main() {
     await db.insert(posts).values({
       id,
       authorId,
-      body: post.body,
+      // Every demo post says so in its text, so it is never mistaken for real work.
+      body: `Sample post. ${post.body}`,
       createdAt: new Date(now - index * 3 * HOUR - 5 * 60 * 1000),
     })
     if (images.length > 0) {

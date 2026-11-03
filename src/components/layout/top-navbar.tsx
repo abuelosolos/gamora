@@ -39,7 +39,8 @@ export interface TopNavbarViewer {
 }
 
 export type TopNavbarProps = { className?: string } & (
-  | { variant: "home" | "activity"; viewer: TopNavbarViewer | null }
+  | { variant: "home"; viewer: TopNavbarViewer | null; below?: React.ReactNode }
+  | { variant: "activity"; viewer: TopNavbarViewer | null }
   | { variant: "jobs"; filters?: React.ReactNode }
   | { variant: "profile"; backHref: string; more?: React.ReactNode }
   | { variant: "post"; closeHref: string; formId: string; submitting?: boolean; canPost?: boolean }
@@ -79,7 +80,8 @@ function ChatButton() {
 function ViewerAvatar({ viewer }: { viewer: TopNavbarViewer | null }) {
   if (!viewer) {
     return (
-      <Button asChild size="xs">
+      // Fixed 96 x 44 px so the bar never shifts; accent outline keeps the text accent on any theme.
+      <Button asChild size="xs" variant="outline-accent" className="h-11 w-24 px-0">
         <Link href="/sign-in?next=/feed">Sign in</Link>
       </Button>
     )
@@ -113,6 +115,8 @@ function TopNavbar(props: TopNavbarProps) {
       return (
         <TopBar
           className={className}
+          below={props.below}
+          bordered={props.below !== undefined}
           leading={<Logo title="Gamora" className="size-7.5" />}
           trailing={
             <>
@@ -250,10 +254,12 @@ function TopNavbar(props: TopNavbarProps) {
 }
 
 /** The bar while the viewer is loading: same height, logo already visible. */
-function TopNavbarSkeleton({ className }: { className?: string }) {
+function TopNavbarSkeleton({ className, below }: { className?: string; below?: React.ReactNode }) {
   return (
     <TopBar
       className={className}
+      below={below}
+      bordered={below !== undefined}
       leading={<Logo title="Gamora" className="size-7.5" />}
       trailing={<Skeleton className="size-7.5 rounded-full" />}
     />

@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import { redirect } from "next/navigation"
-import { Bell, Key, PaintBrush, User } from "@/components/icons"
+import { Bell, Info, Key, PaintBrush, User } from "@/components/icons"
 import { TopNavbar } from "@/components/layout/top-navbar"
 import { SettingsRow, SettingsSection } from "@/components/settings/settings-list"
 import { Avatar } from "@/components/ui/avatar"
@@ -52,6 +52,12 @@ async function SettingsContent() {
       <SettingsSection title="Wallet">
         <SettingsRow icon={<User />} label="Payout" href="/unavailable/wallet" soon />
       </SettingsSection>
+
+      {/* No dedicated icons exist for these yet (TODO(icon): Scroll / ShieldCheck), so Info stands in. */}
+      <SettingsSection title="Terms">
+        <SettingsRow icon={<Info />} label="Terms of use" href="/terms?from=settings" />
+        <SettingsRow icon={<Info />} label="Privacy policy" href="/privacy?from=settings" />
+      </SettingsSection>
     </div>
   )
 }
@@ -66,7 +72,7 @@ function SettingsFallback() {
           <Skeleton className="h-3 w-20" />
         </div>
       </div>
-      {["h-42", "h-28", "h-14"].map((height) => (
+      {["h-42", "h-28", "h-14", "h-28"].map((height) => (
         <div key={height} className="flex flex-col gap-2.5 px-5 py-2.5">
           <Skeleton className="h-3 w-24" />
           <Skeleton className={`${height} w-full`} />

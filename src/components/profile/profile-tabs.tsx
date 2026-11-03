@@ -3,7 +3,8 @@ import { cn } from "@/lib/utils"
 import type { ProfileTab } from "@/server/validators/posts"
 
 /**
- * Figma: ProfileSlipSelect (Activity, Posts, Likes, Reposts, Subscribed Posts).
+ * Figma: ProfileSlipSelect (Activity, Posts, Likes, Reposts, Subscribed Posts), plus
+ * a Replies tab that is not in the design.
  * Caption 12/16, 15px apart; the selected tab is textPrimary with a 2px
  * underline. Each tab is a link (?tab=posts), so the choice lives in the URL
  * and survives a reload. Activity is the default and has no query.
@@ -17,6 +18,7 @@ import type { ProfileTab } from "@/server/validators/posts"
 const TABS: { value: ProfileTab; label: string }[] = [
   { value: "activity", label: "Activity" },
   { value: "posts", label: "Posts" },
+  { value: "replies", label: "Replies" },
   { value: "likes", label: "Likes" },
   { value: "reposts", label: "Reposts" },
   { value: "subscribed", label: "Subscribed Posts" },

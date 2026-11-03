@@ -1,6 +1,8 @@
 import "server-only"
-import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm"
+import { and, arrayOverlaps, asc, count, desc, eq, inArray, isNull, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
+import { cacheLife, cacheTag } from "next/cache"
+import type { PostPreview } from "@/lib/post-meta"
 import { db } from "@/server/db"
 import {
   bookmarks,
@@ -13,6 +15,8 @@ import {
   user,
 } from "@/server/db/schema"
 import { FEED_PAGE_SIZE, type FeedTab } from "@/server/validators/posts"
+
+const EVENT_KINDS: readonly ProfileEventKind[] = ["post", "reply", "repost", "like"]
 
 export interface PostImageView {
   id: string
@@ -37,6 +41,18 @@ export interface PostView {
   repostCount: number
   /** What the signed-in viewer has done. All false when signed out. */
   viewer: { liked: boolean; bookmarked: boolean; reposted: boolean; followsAuthor: boolean }
+  /** Profile lists only: what the profile's owner did with this post, and when. */
+  via?: PostVia
+}
+
+export type ProfileEventKind = "post" | "reply" | "repost" | "like"
+
+export interface PostVia {
+  kind: ProfileEventKind
+  /** When it was done (ISO), not when the post was written. */
+  at: string
+  /** Replies only: the post that was answered (itself possibly a reply), shown above the reply as a thread. */
+  parent?: PostView
 }
 
 export interface FeedPage {
@@ -196,6 +212,8 @@ export async function attachImages(rows: PostRow[], viewerId: string | null): Pr
  */
 export async function listFeed(params: {
   tab: FeedTab
+  /** For you only: show artists who list any of these genres (their onboarding interests or profile categories). */
+  genres?: string[]
   cursor: string | null
   viewerId: string | null
 }): Promise<FeedPage> {
@@ -220,6 +238,9 @@ export async function listFeed(params: {
               posts.authorId,
               db.select({ id: follows.followingId }).from(follows).where(eq(follows.followerId, params.viewerId!))
             )
+          : undefined,
+        params.tab === "for-you" && params.genres && params.genres.length > 0
+          ? or(arrayOverlaps(profile.interests, params.genres), arrayOverlaps(profile.categories, params.genres))
           : undefined
       )
     )
@@ -263,6 +284,167 @@ export async function listPostsByUsername(params: {
   return {
     items: await attachImages(page, params.viewerId),
     nextCursor: hasMore && last ? encodeCursor(last.createdAtText, last.id) : null,
+  }
+}
+
+/** Profile sections that list what the owner did, each by the time it was done. */
+export type ProfileSection = "activity" | "replies" | "likes" | "reposts"
+
+const SECTION_KINDS: Record<ProfileSection, ProfileEventKind[]> = {
+  activity: ["post", "reply", "repost", "like"],
+  replies: ["reply"],
+  likes: ["like"],
+  reposts: ["repost"],
+}
+
+function encodeEventCursor(at: string, id: string, kind: ProfileEventKind): string {
+  return Buffer.from(`${at}|${id}|${kind}`).toString("base64url")
+}
+
+function decodeEventCursor(cursor: string): { at: string; id: string; kind: ProfileEventKind } | null {
+  const [at, id, kind, extra] = Buffer.from(cursor, "base64url").toString().split("|")
+  if (extra !== undefined || !at || !id || !kind) return null
+  if (!CURSOR_TIME.test(at) || !UUID.test(id)) return null
+  if (!EVENT_KINDS.includes(kind as ProfileEventKind)) return null
+  return { at, id, kind: kind as ProfileEventKind }
+}
+
+/**
+ * What one artist did, newest first by WHEN it was done: their posts and
+ * replies (the time written), their reposts and likes (the time pressed). Each
+ * section is the same query over fewer kinds. Keyset pagination on
+ * (event time, post id, kind), so un-liking something never shifts a page. The
+ * username is a bound parameter; the SQL text is fixed.
+ */
+export async function listProfileEvents(params: {
+  username: string
+  section: ProfileSection
+  cursor: string | null
+  viewerId: string | null
+}): Promise<FeedPage> {
+  const decoded = params.cursor ? decodeEventCursor(params.cursor) : null
+  const owner = sql`(select user_id from profile where username = ${params.username})`
+  const parts: Record<ProfileEventKind, ReturnType<typeof sql>> = {
+    post: sql`select 'post'::text as kind, p.created_at as event_at, p.id as post_id from posts p where p.author_id = ${owner} and p.parent_id is null`,
+    reply: sql`select 'reply'::text as kind, p.created_at as event_at, p.id as post_id from posts p where p.author_id = ${owner} and p.parent_id is not null`,
+    repost: sql`select 'repost'::text as kind, r.created_at as event_at, r.post_id as post_id from reposts r where r.user_id = ${owner}`,
+    like: sql`select 'like'::text as kind, l.created_at as event_at, l.post_id as post_id from likes l where l.user_id = ${owner}`,
+  }
+  const union = sql.join(
+    SECTION_KINDS[params.section].map((kind) => parts[kind]),
+    sql` union all `
+  )
+  const after = decoded
+    ? sql`where (e.event_at, e.post_id, e.kind) < (${decoded.at}::timestamp, ${decoded.id}, ${decoded.kind})`
+    : sql``
+
+  const result = await db.execute<{ kind: ProfileEventKind; at: string; id: string }>(sql`
+    select e.kind, e.event_at::text as at, e.post_id as id
+      from (${union}) e
+      ${after}
+     order by e.event_at desc, e.post_id desc, e.kind desc
+     limit ${FEED_PAGE_SIZE + 1}
+  `)
+
+  const events = result.rows
+  const hasMore = events.length > FEED_PAGE_SIZE
+  const pageEvents = hasMore ? events.slice(0, FEED_PAGE_SIZE) : events
+  const ids = [...new Set(pageEvents.map((event) => event.id))]
+  if (ids.length === 0) return { items: [], nextCursor: null }
+
+  const replyIds = pageEvents.filter((event) => event.kind === "reply").map((event) => event.id)
+  const [postRows, parentLinks] = await Promise.all([
+    db
+      .select(postColumns)
+      .from(posts)
+      .innerJoin(user, eq(user.id, posts.authorId))
+      .innerJoin(profile, eq(profile.userId, posts.authorId))
+      .where(inArray(posts.id, ids)),
+    replyIds.length === 0
+      ? Promise.resolve([] as { id: string; parentId: string | null }[])
+      : db.select({ id: posts.id, parentId: posts.parentId }).from(posts).where(inArray(posts.id, replyIds)),
+  ])
+  // The posts the replies answer, as full posts (counts, locks and the viewer's flags included).
+  const parentIds = [...new Set(parentLinks.flatMap((link) => (link.parentId ? [link.parentId] : [])))]
+  const parentRows =
+    parentIds.length === 0
+      ? []
+      : await db
+          .select(postColumns)
+          .from(posts)
+          .innerJoin(user, eq(user.id, posts.authorId))
+          .innerJoin(profile, eq(profile.userId, posts.authorId))
+          .where(inArray(posts.id, parentIds))
+  const parentViews = new Map((await attachImages(parentRows, params.viewerId)).map((view) => [view.id, view]))
+  const parentOf = new Map(parentLinks.flatMap((link) => (link.parentId ? [[link.id, link.parentId] as const] : [])))
+  const byId = new Map(postRows.map((row) => [row.id, row]))
+  
+  // Keep the event order; an event whose post is gone (deleted meanwhile) is skipped.
+  const kept = pageEvents.flatMap((event) => {
+    const row = byId.get(event.id)
+    return row ? [{ event, row }] : []
+  })
+  const views = await attachImages(
+    kept.map((item) => item.row),
+    params.viewerId
+  )
+  const items = views.map((view, index) => {
+    const { event } = kept[index]!
+    const via: PostVia = {
+      kind: event.kind,
+      at: new Date(`${event.at.replace(" ", "T")}Z`).toISOString(),
+      ...(event.kind === "reply" && parentViews.has(parentOf.get(event.id) ?? "")
+        ? { parent: parentViews.get(parentOf.get(event.id)!) }
+        : {}),
+    }
+    return { ...view, via }
+  })
+
+  const last = pageEvents.at(-1)
+  return { items, nextCursor: hasMore && last ? encodeEventCursor(last.at, last.id, last.kind) : null }
+}
+
+/**
+ * What a link preview needs, and nothing else: the creator's public name,
+ * username and avatar, the text, and the first picture. No viewer, email or
+ * internal ids. Cached for a few minutes because link scrapers can ask often; a
+ * deleted post can show in a preview for that long while its page already 404s.
+ */
+export async function getPostPreview(id: string): Promise<PostPreview | null> {
+  "use cache"
+  cacheLife("minutes")
+  cacheTag(`post-${id}`)
+
+  const [row] = await db
+    .select({
+      body: posts.body,
+      name: user.name,
+      username: profile.username,
+      avatarUrl: profile.avatarUrl,
+    })
+    .from(posts)
+    .innerJoin(user, eq(user.id, posts.authorId))
+    .innerJoin(profile, eq(profile.userId, posts.authorId))
+    .where(eq(posts.id, id))
+    .limit(1)
+  if (!row) return null
+
+  const [first] = await db
+    .select({
+      url: postImages.url,
+      width: postImages.width,
+      height: postImages.height,
+      altText: postImages.altText,
+    })
+    .from(postImages)
+    .where(eq(postImages.postId, id))
+    .orderBy(asc(postImages.position))
+    .limit(1)
+
+  return {
+    body: row.body,
+    author: { name: row.name, username: row.username, avatarUrl: row.avatarUrl },
+    image: first ?? null,
   }
 }
 

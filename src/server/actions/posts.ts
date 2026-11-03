@@ -9,13 +9,16 @@ import {
   deleteOwnPost,
   listFeed,
   listPostsByUsername,
+  listProfileEvents,
   type FeedPage,
 } from "@/server/services/posts"
 import {
   createPostSchema,
   feedCursorSchema,
+  feedGenresSchema,
   feedTabSchema,
   postIdSchema,
+  profileTabSchema,
 } from "@/server/validators/posts"
 import { usernameSchema } from "@/server/validators/profile"
 
@@ -121,10 +124,11 @@ export type LoadFeedResult =
   | { ok: false; error: "rate_limited" | "invalid" | "server"; message: string }
 
 /** "Load more" for the feed. Public data, so signed-out visitors are limited by IP. */
-export async function loadFeedPageAction(tab: unknown, cursor: unknown): Promise<LoadFeedResult> {
+export async function loadFeedPageAction(tab: unknown, cursor: unknown, genres?: unknown): Promise<LoadFeedResult> {
   const parsedTab = feedTabSchema.safeParse(tab)
   const parsedCursor = feedCursorSchema.safeParse(cursor ?? null)
-  if (!parsedTab.success || !parsedCursor.success) {
+  const parsedGenres = feedGenresSchema.safeParse(genres ?? [])
+  if (!parsedTab.success || !parsedCursor.success || !parsedGenres.success) {
     return { ok: false, error: "invalid", message: "Could not load more posts." }
   }
 
@@ -135,7 +139,12 @@ export async function loadFeedPageAction(tab: unknown, cursor: unknown): Promise
   if (!allowed) return { ok: false, error: "rate_limited", message: "Slow down and try again soon." }
 
   try {
-    const page = await listFeed({ tab: parsedTab.data, cursor: parsedCursor.data, viewerId: viewer?.id ?? null })
+    const page = await listFeed({
+      tab: parsedTab.data,
+      genres: parsedGenres.data,
+      cursor: parsedCursor.data,
+      viewerId: viewer?.id ?? null,
+    })
     return { ok: true, page }
   } catch (error) {
     console.error("[loadFeed] failed", error instanceof Error ? error.message : "unknown")
@@ -144,10 +153,15 @@ export async function loadFeedPageAction(tab: unknown, cursor: unknown): Promise
 }
 
 /** "Load more" on a profile. Public data, so signed-out visitors are limited by IP. */
-export async function loadProfilePostsAction(username: unknown, cursor: unknown): Promise<LoadFeedResult> {
+export async function loadProfilePostsAction(
+  username: unknown,
+  cursor: unknown,
+  tab: unknown = "posts"
+): Promise<LoadFeedResult> {
   const parsedName = usernameSchema.safeParse(username)
   const parsedCursor = feedCursorSchema.safeParse(cursor ?? null)
-  if (!parsedName.success || !parsedCursor.success) {
+  const parsedTab = profileTabSchema.safeParse(tab)
+  if (!parsedName.success || !parsedCursor.success || !parsedTab.success || parsedTab.data === "subscribed") {
     return { ok: false, error: "invalid", message: "Could not load more posts." }
   }
 
@@ -158,11 +172,11 @@ export async function loadProfilePostsAction(username: unknown, cursor: unknown)
   if (!allowed) return { ok: false, error: "rate_limited", message: "Slow down and try again soon." }
 
   try {
-    const page = await listPostsByUsername({
-      username: parsedName.data,
-      cursor: parsedCursor.data,
-      viewerId: viewer?.id ?? null,
-    })
+    const base = { username: parsedName.data, cursor: parsedCursor.data, viewerId: viewer?.id ?? null }
+    const page =
+      parsedTab.data === "posts"
+        ? await listPostsByUsername(base)
+        : await listProfileEvents({ ...base, section: parsedTab.data })
     return { ok: true, page }
   } catch (error) {
     console.error("[loadProfilePosts] failed", error instanceof Error ? error.message : "unknown")

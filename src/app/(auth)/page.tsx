@@ -1,14 +1,16 @@
 import Link from "next/link"
 import { AppleButton, GoogleButton, AUTH_BUTTON_CLASS } from "@/components/auth/provider-buttons"
+import { PortfolioNote } from "@/components/auth/portfolio-note"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/shared/logo"
 
 /**
  * Figma: Auth (welcome). Logo and wordmark, tagline, provider buttons,
- * "Continue without an account" and the legal links.
+ * the third button and the legal links.
  *
- * Matches Figma: three buttons, no extra links. The email form lives at
- * /sign-in (also where the proxy sends signed-out visitors).
+ * Deviation from Figma (requested): the third button reads "Continue with
+ * email" (opens the email-first flow at /sign-in, also where the proxy sends
+ * signed-out visitors) and a small "Browse first" link goes to the public feed.
  */
 export default function WelcomePage() {
   return (
@@ -28,8 +30,15 @@ export default function WelcomePage() {
           <AppleButton />
           <GoogleButton next="/feed" />
           <Button asChild variant="outline-accent" className={AUTH_BUTTON_CLASS}>
-            <Link href="/feed">Continue without an account</Link>
+            <Link href="/sign-in">Continue with email</Link>
           </Button>
+          <Link
+            href="/feed"
+            className="inline-flex min-h-11 items-center justify-center text-body-sm text-textSecondary underline-offset-4 hover:underline focus-visible:underline"
+          >
+            Browse first
+          </Link>
+          <PortfolioNote />
         </div>
       </div>
       <nav

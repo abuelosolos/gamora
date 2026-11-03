@@ -25,9 +25,24 @@ export interface TopBarProps extends Omit<React.ComponentProps<"header">, "title
   trailing?: React.ReactNode
   /** Slide away while scrolling down. Default true. */
   hideOnScroll?: boolean
+  /** A row that belongs to the bar (Home's For you / Following slip): it hides and returns with the bar. */
+  below?: React.ReactNode
+  /** A borderDefault line under the whole bar (and its `below` row). */
+  bordered?: boolean
 }
 
-function TopBar({ title, leading, trailing, hideOnScroll = true, className, onFocus, onBlur, ...props }: TopBarProps) {
+function TopBar({
+  title,
+  leading,
+  trailing,
+  hideOnScroll = true,
+  below,
+  bordered = false,
+  className,
+  onFocus,
+  onBlur,
+  ...props
+}: TopBarProps) {
   const scrolledAway = useHideOnScroll({ enabled: hideOnScroll })
   const [focusInside, setFocusInside] = React.useState(false)
   const hidden = scrolledAway && !focusInside
@@ -45,21 +60,25 @@ function TopBar({ title, leading, trailing, hideOnScroll = true, className, onFo
         onBlur?.(event)
       }}
       className={cn(
-        "sticky top-0 z-10 flex min-h-12.5 items-center justify-between gap-3 bg-bgDefault px-5 py-1 transition-transform duration-200 ease-out motion-reduce:transition-none",
+        "sticky top-0 z-10 bg-bgDefault transition-transform duration-200 ease-out motion-reduce:transition-none",
+        bordered && "border-b border-borderDefault",
         hidden && "-translate-y-full",
         className
       )}
       {...props}
     >
-      <div className="flex min-w-0 items-center gap-2.5">
-        {leading}
-        {title ? (
-          <h1 className="truncate font-display text-title-s font-semibold text-textPrimary">
-            {title}
-          </h1>
-        ) : null}
+      <div className="flex min-h-12.5 items-center justify-between gap-3 px-5 py-1">
+        <div className="flex min-w-0 items-center gap-2.5">
+          {leading}
+          {title ? (
+            <h1 className="truncate font-display text-title-s font-semibold text-textPrimary">
+              {title}
+            </h1>
+          ) : null}
+        </div>
+        {trailing ? <div className="flex shrink-0 items-center gap-1">{trailing}</div> : null}
       </div>
-      {trailing ? <div className="flex shrink-0 items-center gap-1">{trailing}</div> : null}
+      {below}
     </header>
   )
 }

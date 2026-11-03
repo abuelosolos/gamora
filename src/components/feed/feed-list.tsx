@@ -8,10 +8,15 @@ import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
 import { loadFeedPageAction, loadProfilePostsAction } from "@/server/actions/posts"
 import type { FeedPage, PostView } from "@/server/services/posts"
-import type { FeedTab } from "@/server/validators/posts"
+import type { FeedTab, ProfileTab } from "@/server/validators/posts"
+
+/** The same post can show twice in Activity (posted, then liked), so the key includes what was done. */
+function itemKey(post: PostView): string {
+  return `${post.id}:${post.via?.kind ?? ""}`
+}
 
 /** Where the posts come from: a feed tab, or one artist's profile. */
-export type FeedSource = { kind: "feed"; tab: FeedTab } | { kind: "profile"; username: string; isOwner: boolean }
+export type FeedSource = { kind: "feed"; tab: FeedTab; genres?: string[] } | { kind: "profile"; username: string; isOwner: boolean; tab: ProfileTab }
 
 export interface FeedListProps {
   source: FeedSource
@@ -37,12 +42,12 @@ function FeedList({ source, initial }: FeedListProps) {
     setStatus("loading")
     const result =
       source.kind === "feed"
-        ? await loadFeedPageAction(source.tab, cursor)
-        : await loadProfilePostsAction(source.username, cursor)
+        ? await loadFeedPageAction(source.tab, cursor, source.genres)
+        : await loadProfilePostsAction(source.username, cursor, source.tab)
     if (result.ok) {
       setItems((current) => {
-        const seen = new Set(current.map((post) => post.id))
-        return [...current, ...result.page.items.filter((post) => !seen.has(post.id))]
+        const seen = new Set(current.map(itemKey))
+        return [...current, ...result.page.items.filter((post) => !seen.has(itemKey(post)))]
       })
       setCursor(result.page.nextCursor)
       setStatus("idle")
@@ -67,6 +72,16 @@ function FeedList({ source, initial }: FeedListProps) {
   }, [cursor, status, loadMore])
 
   if (items.length === 0) {
+    if (source.kind === "profile" && source.tab !== "posts") {
+      const empty = {
+        activity: ["No activity yet", "Posts, replies, reposts and likes will show up here."],
+        replies: ["No replies yet", "Replies will show up here."],
+        likes: ["No likes yet", "Posts liked will show up here."],
+        reposts: ["No reposts yet", "Reposts will show up here."],
+        subscribed: ["Nothing here yet", "Subscribed posts will show up here."],
+      }[source.tab]
+      return <EmptyState title={empty[0]} description={empty[1]} />
+    }
     if (source.kind === "profile") {
       return source.isOwner ? (
         <EmptyState
@@ -83,6 +98,19 @@ function FeedList({ source, initial }: FeedListProps) {
         />
       ) : (
         <EmptyState title="No posts yet" description="When this artist posts, you will see it here." />
+      )
+    }
+    if (source.tab === "for-you" && source.genres && source.genres.length > 0) {
+      return (
+        <EmptyState
+          title="No posts in these genres yet"
+          description="Try another genre, or reset the filter to see everything."
+          action={
+            <Button asChild>
+              <Link href="/feed">Reset filter</Link>
+            </Button>
+          }
+        />
       )
     }
     return source.tab === "following" ? (
@@ -110,7 +138,7 @@ function FeedList({ source, initial }: FeedListProps) {
     <>
       <ul className="flex flex-col">
         {items.map((post) => (
-          <li key={post.id}>
+          <li key={itemKey(post)}>
             <PostCard post={post} onDeleted={() => setItems((current) => current.filter((p) => p.id !== post.id))} />
           </li>
         ))}
