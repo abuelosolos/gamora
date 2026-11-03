@@ -66,6 +66,8 @@ export async function continueWithEmailAction(
     try {
       await auth.api.signInEmail({ body: { email, password }, headers: await headers() })
     } catch {
+      // Logged without the email or password: a hash of the email and the IP are enough to spot guessing.
+      console.warn(`[auth] sign-in failed account=${hashKey(email)} ip=${ip} at=${new Date().toISOString()}`)
       return { error: FAILED }
     }
     redirect(afterAuthPath(formData.get("next")))
@@ -87,6 +89,7 @@ export async function continueWithEmailAction(
       headers: await headers(),
     })
   } catch {
+    console.warn(`[auth] sign-up failed account=${hashKey(email)} ip=${ip} at=${new Date().toISOString()}`)
     return { error: FAILED }
   }
   redirect(afterAuthPath(formData.get("next")))

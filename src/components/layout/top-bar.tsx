@@ -1,5 +1,8 @@
+"use client"
+
 import * as React from "react"
 import { Button } from "@/components/ui/button"
+import { useHideOnScroll } from "@/hooks/use-hide-on-scroll"
 import { cn } from "@/lib/utils"
 
 /**
@@ -10,19 +13,40 @@ import { cn } from "@/lib/utils"
  *   Profile:  leading = back button, trailing = search, more
  *   Post:     leading = close,       trailing = Drafts, Posts chips
  *   Jobs:     title   = "Jobs",      trailing = search, filters
+ *
+ * The bar slides up out of view while the page is scrolled down and slides back
+ * when it is scrolled up (useHideOnScroll). It stays visible at the top of the
+ * page, while focus is inside it, and always when `hideOnScroll` is false
+ * (screens whose bar holds the main action, like Post and Save).
  */
 export interface TopBarProps extends Omit<React.ComponentProps<"header">, "title"> {
   title?: string
   leading?: React.ReactNode
   trailing?: React.ReactNode
+  /** Slide away while scrolling down. Default true. */
+  hideOnScroll?: boolean
 }
 
-function TopBar({ title, leading, trailing, className, ...props }: TopBarProps) {
+function TopBar({ title, leading, trailing, hideOnScroll = true, className, onFocus, onBlur, ...props }: TopBarProps) {
+  const scrolledAway = useHideOnScroll({ enabled: hideOnScroll })
+  const [focusInside, setFocusInside] = React.useState(false)
+  const hidden = scrolledAway && !focusInside
+
   return (
     <header
       data-slot="top-bar"
+      data-hidden={hidden || undefined}
+      onFocus={(event) => {
+        setFocusInside(true)
+        onFocus?.(event)
+      }}
+      onBlur={(event) => {
+        setFocusInside(false)
+        onBlur?.(event)
+      }}
       className={cn(
-        "sticky top-0 z-10 flex min-h-12.5 items-center justify-between gap-3 bg-bgDefault px-5 py-1",
+        "sticky top-0 z-10 flex min-h-12.5 items-center justify-between gap-3 bg-bgDefault px-5 py-1 transition-transform duration-200 ease-out motion-reduce:transition-none",
+        hidden && "-translate-y-full",
         className
       )}
       {...props}

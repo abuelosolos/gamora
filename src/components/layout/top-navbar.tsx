@@ -27,8 +27,9 @@ import { Skeleton } from "@/components/ui/skeleton"
  *   settings  Back + "Edit profile"   | Save (greyed out while there is nothing to save: canSave=false)
  *   page      Back + title            | nothing (settings list, appearance, account)
  *
- * Search arrives in Phase 6 and chat is not available, so search is disabled
- * and chat goes to the Coming soon screen. Pass a slot (`filters`, `more`) to
+ * Search opens /search (people). Jobs search is a separate screen that is not
+ * built, so its icon stays disabled, and chat goes to the Coming soon screen.
+ * The bar hides while scrolling down (except post and settings). Pass a slot (`filters`, `more`) to
  * replace a disabled placeholder when its feature exists.
  */
 export interface TopNavbarViewer {
@@ -48,7 +49,18 @@ export type TopNavbarProps = { className?: string } & (
 
 function SearchButton() {
   return (
-    <TopBarButton label="Search, coming soon" disabled>
+    <TopBarButton label="Search" asChild>
+      <Link href="/search">
+        <MagnifyingGlass aria-hidden="true" />
+      </Link>
+    </TopBarButton>
+  )
+}
+
+/** Jobs has its own search screen in the design (job titles); until it is built the icon is inert. */
+function JobsSearchButton() {
+  return (
+    <TopBarButton label="Search jobs, coming soon" disabled>
       <MagnifyingGlass aria-hidden="true" />
     </TopBarButton>
   )
@@ -134,7 +146,7 @@ function TopNavbar(props: TopNavbarProps) {
           title="Jobs"
           trailing={
             <>
-              <SearchButton />
+              <JobsSearchButton />
               {props.filters ?? (
                 <TopBarButton label="Filters, coming soon" disabled>
                   <SlidersHorizontal aria-hidden="true" />
@@ -167,6 +179,7 @@ function TopNavbar(props: TopNavbarProps) {
       return (
         <TopBar
           className={className}
+          hideOnScroll={false}
           leading={
             <TopBarButton label="Close" asChild>
               <Link href={props.closeHref}>
@@ -211,6 +224,7 @@ function TopNavbar(props: TopNavbarProps) {
       return (
         <TopBar
           className={className}
+          hideOnScroll={false}
           leading={
             <>
               <BackButton href={props.backHref} />

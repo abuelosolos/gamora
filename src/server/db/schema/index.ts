@@ -4,3 +4,4 @@ export * from "./posts";
 export * from "./interactions";
 export * from "./jobs";
 export * from "./reports";
+export * from "./search";
