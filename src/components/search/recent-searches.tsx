@@ -7,17 +7,21 @@ import type { RecentSearches } from "@/server/services/search"
 /**
  * Figma: "Recent" (caption, with the clear-all button on the right), a
  * sideways row of people you opened (avatar + @username, 20px apart), then a
- * list of text searches, each with an ArrowUpLeft that puts the text back in
- * the search box. Renders nothing when there is no history.
+ * list of text searches. Pressing the text searches again; the ArrowUpLeft is
+ * its own button that only puts the text back in the search box (no search),
+ * so it can be edited first. Renders nothing when there is no history.
  */
 export interface RecentSearchesProps {
   history: RecentSearches
-  onPickQuery: (query: string) => void
+  /** Run this search again (fills the box and shows the results). */
+  onSearchQuery: (query: string) => void
+  /** Only put this text in the search box. */
+  onFillQuery: (query: string) => void
   onOpenPerson: (username: string) => void
   onCleared: () => void
 }
 
-function RecentSearchesList({ history, onPickQuery, onOpenPerson, onCleared }: RecentSearchesProps) {
+function RecentSearchesList({ history, onSearchQuery, onFillQuery, onOpenPerson, onCleared }: RecentSearchesProps) {
   if (history.people.length === 0 && history.queries.length === 0) return null
 
   return (
@@ -49,15 +53,22 @@ function RecentSearchesList({ history, onPickQuery, onOpenPerson, onCleared }: R
       {history.queries.length > 0 ? (
         <ul className="flex flex-col">
           {history.queries.map((query) => (
-            <li key={query}>
+            <li key={query} className="flex items-center">
               <button
                 type="button"
-                onClick={() => onPickQuery(query)}
-                aria-label={`Search again for ${query}`}
-                className="flex min-h-11 w-full items-center justify-between gap-3 px-5 py-2.5 text-left text-caption text-textPrimary outline-none transition-colors hover:bg-bgSurface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accentDefault"
+                onClick={() => onSearchQuery(query)}
+                aria-label={`Search for ${query}`}
+                className="flex min-h-11 min-w-0 flex-1 items-center py-2.5 pr-3 pl-5 text-left text-caption text-textPrimary outline-none transition-colors hover:bg-bgSurface focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accentDefault"
               >
                 <span className="truncate">{query}</span>
-                <ArrowUpLeft aria-hidden="true" className="size-6 shrink-0" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onFillQuery(query)}
+                aria-label={`Put ${query} in the search box`}
+                className="flex size-11 shrink-0 items-center justify-center text-textSecondary outline-none transition-colors hover:bg-bgSurface hover:text-textPrimary focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accentDefault"
+              >
+                <ArrowUpLeft aria-hidden="true" className="size-6" />
               </button>
             </li>
           ))}

@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { INTERESTS, type Interest } from "@/lib/interests"
 
 export const POST_BODY_MAX = 2000
 export const POST_MAX_IMAGES = 4
@@ -32,8 +33,23 @@ export const postIdSchema = z.uuid()
 export const feedTabSchema = z.enum(["for-you", "following"])
 export type FeedTab = z.infer<typeof feedTabSchema>
 
+/**
+ * The genres picked in the For you filter. From the URL it is one comma list
+ * ("Pixel art,Abstract"); from code it is an array. Only names from the
+ * onboarding list count: anything else is dropped, repeats are removed.
+ */
+export const feedGenresSchema = z.preprocess(
+  (value) => (typeof value === "string" ? value.split(",") : value),
+  z
+    .array(z.unknown())
+    .max(INTERESTS.length * 2)
+    .transform((list) =>
+      [...new Set(list.filter((name): name is Interest => (INTERESTS as readonly unknown[]).includes(name)))]
+    )
+)
+
 /** Profile sections, in the order of Figma's ProfileSlipSelect. */
-export const PROFILE_TABS = ["activity", "posts", "likes", "reposts", "subscribed"] as const
+export const PROFILE_TABS = ["activity", "posts", "replies", "likes", "reposts", "subscribed"] as const
 export const profileTabSchema = z.enum(PROFILE_TABS)
 export type ProfileTab = z.infer<typeof profileTabSchema>
 

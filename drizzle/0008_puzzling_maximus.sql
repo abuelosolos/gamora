@@ -1,0 +1,1 @@
+CREATE INDEX "likes_user_idx" ON "likes" USING btree ("user_id","created_at" DESC NULLS LAST);

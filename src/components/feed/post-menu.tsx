@@ -74,11 +74,11 @@ function PostMenu({ postId, username, isOwner, following, onDeleted, redirectTo,
             <DotsThreeVertical aria-hidden="true" className="size-6 text-textSecondary" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="w-auto min-w-44">
           {isOwner ? (
             <DropdownMenuItem
               variant="destructive"
-              className="min-h-11 px-3 text-body-sm"
+              className="min-h-11 gap-2 px-3 text-body-sm whitespace-nowrap"
               onSelect={() => setConfirming(true)}
             >
               <Trash aria-hidden="true" />
@@ -86,12 +86,12 @@ function PostMenu({ postId, username, isOwner, following, onDeleted, redirectTo,
             </DropdownMenuItem>
           ) : (
             <>
-              <DropdownMenuItem className="min-h-11 px-3 text-body-sm" onSelect={() => void toggleFollow()}>
+              <DropdownMenuItem className="min-h-11 gap-2 px-3 text-body-sm whitespace-nowrap" onSelect={() => void toggleFollow()}>
                 {isFollowing ? <UserFill aria-hidden="true" /> : <User aria-hidden="true" />}
                 {isFollowing ? "Unfollow" : "Follow"} @{username}
               </DropdownMenuItem>
               {/* TODO(icon): Flag is not in src/components/icons yet, so Report has no icon. */}
-              <DropdownMenuItem className="min-h-11 px-3 text-body-sm" onSelect={() => setReporting(true)}>
+              <DropdownMenuItem className="min-h-11 gap-2 px-3 text-body-sm whitespace-nowrap" onSelect={() => setReporting(true)}>
                 Report
               </DropdownMenuItem>
             </>

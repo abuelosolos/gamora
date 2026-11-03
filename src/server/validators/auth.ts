@@ -25,5 +25,8 @@ export const signInSchema = z.strictObject({
   password: z.string().min(1, "Enter your password.").max(128),
 })
 
+/** Step one of the email flow: just the address. */
+export const emailCheckSchema = z.strictObject({ email })
+
 export type SignUpInput = z.infer<typeof signUpSchema>
 export type SignInInput = z.infer<typeof signInSchema>

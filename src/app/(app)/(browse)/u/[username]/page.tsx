@@ -8,7 +8,7 @@ import { ProfileSkeleton } from "@/components/profile/profile-skeleton"
 import { ProfileTabs } from "@/components/profile/profile-tabs"
 import { EmptyState } from "@/components/shared/empty-state"
 import { getUser } from "@/server/auth/session"
-import { listPostsByUsername } from "@/server/services/posts"
+import { listPostsByUsername, listProfileEvents } from "@/server/services/posts"
 import { getPublicProfile } from "@/server/services/profile"
 import { usernameSchema } from "@/server/validators/profile"
 import { profileTabSchema } from "@/server/validators/posts"
@@ -46,7 +46,11 @@ async function ProfileContent({
   const viewerId = viewer?.id ?? null
   const [profile, page] = await Promise.all([
     getPublicProfile(parsed.data, viewerId),
-    tab === "posts" ? listPostsByUsername({ username: parsed.data, cursor: null, viewerId }) : null,
+    tab === "posts"
+      ? listPostsByUsername({ username: parsed.data, cursor: null, viewerId })
+      : tab === "subscribed"
+        ? null
+        : listProfileEvents({ username: parsed.data, section: tab, cursor: null, viewerId }),
   ])
   if (!profile) notFound()
 
@@ -58,11 +62,11 @@ async function ProfileContent({
       {page ? (
         <FeedList
           key={`${profile.username}-${tab}`}
-          source={{ kind: "profile", username: profile.username, isOwner: profile.isOwner }}
+          source={{ kind: "profile", username: profile.username, isOwner: profile.isOwner, tab }}
           initial={page}
         />
       ) : (
-        // TODO(stage D): Activity, Likes, Reposts and Subscribed Posts get their lists.
+        // Subscribed Posts: no subscriptions yet (the tab itself opens the Coming soon screen).
         <EmptyState title="Nothing here yet" description="This section is coming soon." />
       )}
     </main>

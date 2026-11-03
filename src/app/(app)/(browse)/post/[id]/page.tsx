@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ReplySection, ReplySectionSkeleton } from "@/components/replies/reply-section"
@@ -7,13 +8,20 @@ import { CaretLeft } from "@/components/icons"
 import { TopBar, TopBarButton } from "@/components/layout/top-bar"
 import { getUser } from "@/server/auth/session"
 import { listReplies } from "@/server/services/interactions"
-import { getPostById } from "@/server/services/posts"
+import { postPreviewMetadata } from "@/lib/post-meta"
+import { getPostById, getPostPreview } from "@/server/services/posts"
 import { getProfileByUserId } from "@/server/services/profile"
 import { postIdSchema } from "@/server/validators/posts"
 
 // Public: readable signed out. There is no post-detail frame in Figma, so this
 // reuses the post card at full width (variant="detail") with the replies below.
-export const metadata = { title: "Post" }
+// The tags (title, description, picture) are what a pasted link shows in a chat.
+export async function generateMetadata({ params }: PageProps<"/post/[id]">): Promise<Metadata> {
+  const parsed = postIdSchema.safeParse((await params).id)
+  const preview = parsed.success ? await getPostPreview(parsed.data) : null
+  if (!parsed.success || !preview) return { title: "Post not found", robots: { index: false } }
+  return postPreviewMetadata(preview, parsed.data)
+}
 
 export default function PostPage({ params }: PageProps<"/post/[id]">) {
   return (

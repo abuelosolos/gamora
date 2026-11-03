@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useToast } from "@/components/ui/toast"
 import { setFollowAction } from "@/server/actions/interactions"
 
@@ -13,6 +13,7 @@ import { setFollowAction } from "@/server/actions/interactions"
 export function useFollow(username: string, initial: boolean) {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const [following, setFollowing] = React.useState(initial)
   const busy = React.useRef(false)
@@ -26,6 +27,8 @@ export function useFollow(username: string, initial: boolean) {
       const result = await setFollowAction({ username, on: !previous })
       if (result.ok) {
         setFollowing(result.on)
+        // On the Following tab the list itself changes with who you follow.
+        if (pathname === "/feed" && searchParams.get("tab") === "following") router.refresh()
         toast({ variant: "success", title: result.on ? `Following @${username}` : `Unfollowed @${username}` })
       } else {
         setFollowing(previous)
@@ -38,7 +41,7 @@ export function useFollow(username: string, initial: boolean) {
     } finally {
       busy.current = false
     }
-  }, [following, username, router, pathname, toast])
+  }, [following, username, router, pathname, searchParams, toast])
 
   return { following, toggle }
 }

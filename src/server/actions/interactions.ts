@@ -1,5 +1,6 @@
 "use server"
 
+import { revalidatePath } from "next/cache"
 import { getUser, requireUserForAction } from "@/server/auth/session"
 import { clientIp, withinRateLimits } from "@/server/security/rate-limit"
 import {
@@ -112,6 +113,10 @@ export async function setFollowAction(input: unknown): Promise<SetFollowActionRe
     const result = await setFollow(session.user.id, parsed.data.username, parsed.data.on)
     if (!result.found) return NOT_FOUND("Profile not found.")
     if (result.self) return { ok: false, error: "invalid", message: "You cannot follow yourself." }
+    // The Following feed and the profile numbers changed: drop their cached copies
+    // so the next visit (or the page you are on) loads fresh.
+    revalidatePath("/feed")
+    revalidatePath("/u/[username]", "page")
     return { ok: true, on: result.on, followerCount: result.followerCount }
   } catch (error) {
     logFailure("follow", error)
