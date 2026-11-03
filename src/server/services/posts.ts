@@ -14,6 +14,7 @@ import {
   reposts,
   user,
 } from "@/server/db/schema"
+import { isBlockedEither, notBlockedWith } from "@/server/services/blocks"
 import { FEED_PAGE_SIZE, type FeedTab } from "@/server/validators/posts"
 
 const EVENT_KINDS: readonly ProfileEventKind[] = ["post", "reply", "repost", "like"]
@@ -203,6 +204,23 @@ export async function attachImages(rows: PostRow[], viewerId: string | null): Pr
   }))
 }
 
+/** Which posts a feed tab shows (top-level posts, Following, genres, blocks). Shared by the feed and the new-posts check. */
+function feedFilters(params: { tab: FeedTab; genres?: string[]; viewerId: string | null }) {
+  return and(
+    isNull(posts.parentId),
+    params.tab === "following"
+      ? inArray(
+          posts.authorId,
+          db.select({ id: follows.followingId }).from(follows).where(eq(follows.followerId, params.viewerId!))
+        )
+      : undefined,
+    params.tab === "for-you" && params.genres && params.genres.length > 0
+      ? or(arrayOverlaps(profile.interests, params.genres), arrayOverlaps(profile.categories, params.genres))
+      : undefined,
+    notBlockedWith(params.viewerId, posts.authorId)
+  )
+}
+
 /**
  * One page of the feed, newest first. Keyset pagination on (created_at, id),
  * which the posts_created_at_idx index serves. A bad cursor starts from the top.
@@ -229,21 +247,7 @@ export async function listFeed(params: {
     .from(posts)
     .innerJoin(user, eq(user.id, posts.authorId))
     .innerJoin(profile, eq(profile.userId, posts.authorId))
-    .where(
-      and(
-        isNull(posts.parentId),
-        after,
-        params.tab === "following"
-          ? inArray(
-              posts.authorId,
-              db.select({ id: follows.followingId }).from(follows).where(eq(follows.followerId, params.viewerId!))
-            )
-          : undefined,
-        params.tab === "for-you" && params.genres && params.genres.length > 0
-          ? or(arrayOverlaps(profile.interests, params.genres), arrayOverlaps(profile.categories, params.genres))
-          : undefined
-      )
-    )
+    .where(and(after, feedFilters(params)))
     .orderBy(desc(posts.createdAt), desc(posts.id))
     .limit(FEED_PAGE_SIZE + 1)
 
@@ -255,6 +259,48 @@ export async function listFeed(params: {
     items: await attachImages(page, params.viewerId),
     nextCursor: hasMore && last ? encodeCursor(last.createdAtText, last.id) : null,
   }
+}
+
+export interface NewerFeedPosts {
+  count: number
+  /** The newest of them, for the pill's avatar. */
+  author: { name: string; username: string; avatarUrl: string | null } | null
+}
+
+/**
+ * Posts by other people that are newer than the one at the top of the reader's
+ * feed. Compared on (created_at, id) against the top post itself, so there is no
+ * timestamp rounding. The viewer's own posts never count.
+ */
+export async function getNewerFeedPosts(params: {
+  tab: FeedTab
+  genres?: string[]
+  viewerId: string | null
+  topPostId: string | null
+}): Promise<NewerFeedPosts> {
+  if (params.tab === "following" && !params.viewerId) return { count: 0, author: null }
+
+  const newer = params.topPostId
+    ? sql`(${posts.createdAt}, ${posts.id}) > (select p.created_at, p.id from posts p where p.id = ${params.topPostId})`
+    : undefined
+  const where = and(newer, feedFilters(params), params.viewerId ? sql`${posts.authorId} <> ${params.viewerId}` : undefined)
+
+  const [rows, totals] = await Promise.all([
+    db
+      .select({ name: user.name, username: profile.username, avatarUrl: profile.avatarUrl })
+      .from(posts)
+      .innerJoin(user, eq(user.id, posts.authorId))
+      .innerJoin(profile, eq(profile.userId, posts.authorId))
+      .where(where)
+      .orderBy(desc(posts.createdAt), desc(posts.id))
+      .limit(1),
+    db
+      .select({ value: count() })
+      .from(posts)
+      .innerJoin(profile, eq(profile.userId, posts.authorId))
+      .where(where),
+  ])
+  return { count: totals[0]?.value ?? 0, author: rows[0] ?? null }
 }
 
 /** One artist's posts, newest first, same keyset pagination as the feed (posts_author_idx). */
@@ -273,7 +319,7 @@ export async function listPostsByUsername(params: {
     .from(posts)
     .innerJoin(user, eq(user.id, posts.authorId))
     .innerJoin(profile, eq(profile.userId, posts.authorId))
-    .where(and(eq(profile.username, params.username), isNull(posts.parentId), after))
+    .where(and(eq(profile.username, params.username), isNull(posts.parentId), after, notBlockedWith(params.viewerId, posts.authorId)))
     .orderBy(desc(posts.createdAt), desc(posts.id))
     .limit(FEED_PAGE_SIZE + 1)
 
@@ -323,6 +369,17 @@ export async function listProfileEvents(params: {
   viewerId: string | null
 }): Promise<FeedPage> {
   const decoded = params.cursor ? decodeEventCursor(params.cursor) : null
+  if (params.viewerId) {
+    // Blocked either way with the profile owner: nothing to show.
+    const [ownerRow] = await db
+      .select({ userId: profile.userId })
+      .from(profile)
+      .where(eq(profile.username, params.username))
+      .limit(1)
+    if (ownerRow && ownerRow.userId !== params.viewerId && (await isBlockedEither(params.viewerId, ownerRow.userId))) {
+      return { items: [], nextCursor: null }
+    }
+  }
   const owner = sql`(select user_id from profile where username = ${params.username})`
   const parts: Record<ProfileEventKind, ReturnType<typeof sql>> = {
     post: sql`select 'post'::text as kind, p.created_at as event_at, p.id as post_id from posts p where p.author_id = ${owner} and p.parent_id is null`,
@@ -359,7 +416,7 @@ export async function listProfileEvents(params: {
       .from(posts)
       .innerJoin(user, eq(user.id, posts.authorId))
       .innerJoin(profile, eq(profile.userId, posts.authorId))
-      .where(inArray(posts.id, ids)),
+      .where(and(inArray(posts.id, ids), notBlockedWith(params.viewerId, posts.authorId))),
     replyIds.length === 0
       ? Promise.resolve([] as { id: string; parentId: string | null }[])
       : db.select({ id: posts.id, parentId: posts.parentId }).from(posts).where(inArray(posts.id, replyIds)),
@@ -374,7 +431,7 @@ export async function listProfileEvents(params: {
           .from(posts)
           .innerJoin(user, eq(user.id, posts.authorId))
           .innerJoin(profile, eq(profile.userId, posts.authorId))
-          .where(inArray(posts.id, parentIds))
+          .where(and(inArray(posts.id, parentIds), notBlockedWith(params.viewerId, posts.authorId)))
   const parentViews = new Map((await attachImages(parentRows, params.viewerId)).map((view) => [view.id, view]))
   const parentOf = new Map(parentLinks.flatMap((link) => (link.parentId ? [[link.id, link.parentId] as const] : [])))
   const byId = new Map(postRows.map((row) => [row.id, row]))
@@ -454,7 +511,7 @@ export async function getPostById(id: string, viewerId: string | null): Promise<
     .from(posts)
     .innerJoin(user, eq(user.id, posts.authorId))
     .innerJoin(profile, eq(profile.userId, posts.authorId))
-    .where(eq(posts.id, id))
+    .where(and(eq(posts.id, id), notBlockedWith(viewerId, posts.authorId)))
     .limit(1)
   return (await attachImages(rows, viewerId))[0] ?? null
 }
@@ -522,7 +579,7 @@ export async function listBookmarkedPosts(params: { viewerId: string; cursor: st
     .innerJoin(posts, eq(posts.id, bookmarks.postId))
     .innerJoin(user, eq(user.id, posts.authorId))
     .innerJoin(profile, eq(profile.userId, posts.authorId))
-    .where(and(eq(bookmarks.userId, params.viewerId), after))
+    .where(and(eq(bookmarks.userId, params.viewerId), after, notBlockedWith(params.viewerId, posts.authorId)))
     .orderBy(desc(bookmarks.createdAt), desc(bookmarks.postId))
     .limit(FEED_PAGE_SIZE + 1)
 

@@ -1,5 +1,6 @@
 "use server"
 
+import { revalidatePath } from "next/cache"
 import { requireUserForAction, getUser } from "@/server/auth/session"
 import { clientIp, withinRateLimits } from "@/server/security/rate-limit"
 import { isOwnPostImageUrl } from "@/server/storage/blob-urls"
@@ -7,10 +8,12 @@ import { deleteImages } from "@/server/storage/process-image"
 import {
   createPostWithImages,
   deleteOwnPost,
+  getNewerFeedPosts,
   listFeed,
   listPostsByUsername,
   listProfileEvents,
   type FeedPage,
+  type NewerFeedPosts,
 } from "@/server/services/posts"
 import {
   createPostSchema,
@@ -83,6 +86,9 @@ export async function createPostAction(input: unknown): Promise<CreatePostResult
   // 5. Write. The author is the session user.
   try {
     const id = await createPostWithImages(user.id, body, images)
+    // Drop the cached feed and profile views so the next visit shows the new post.
+    revalidatePath("/feed")
+    revalidatePath("/u/[username]", "page")
     return { ok: true, id }
   } catch (error) {
     console.error("[createPost] failed", error instanceof Error ? error.message : "unknown")
@@ -181,5 +187,34 @@ export async function loadProfilePostsAction(
   } catch (error) {
     console.error("[loadProfilePosts] failed", error instanceof Error ? error.message : "unknown")
     return { ok: false, error: "server", message: "Could not load more posts." }
+  }
+}
+
+export type NewPostsResult = { ok: true; found: NewerFeedPosts } | { ok: false }
+
+/** "Are there new posts?" for the feed pill. Public data; limited by user, or by IP when signed out. */
+export async function checkNewPostsAction(tab: unknown, genres: unknown, topPostId: unknown): Promise<NewPostsResult> {
+  const parsedTab = feedTabSchema.safeParse(tab)
+  const parsedGenres = feedGenresSchema.safeParse(genres ?? [])
+  const parsedTop = postIdSchema.nullable().safeParse(topPostId ?? null)
+  if (!parsedTab.success || !parsedGenres.success || !parsedTop.success) return { ok: false }
+
+  const viewer = await getUser()
+  const allowed = await withinRateLimits([
+    { name: "feed:new", key: viewer?.id ?? (await clientIp()), limit: 40, windowSeconds: 10 * 60 },
+  ])
+  if (!allowed) return { ok: false }
+
+  try {
+    const found = await getNewerFeedPosts({
+      tab: parsedTab.data,
+      genres: parsedGenres.data,
+      viewerId: viewer?.id ?? null,
+      topPostId: parsedTop.data,
+    })
+    return { ok: true, found }
+  } catch (error) {
+    console.error("[checkNewPosts] failed", error instanceof Error ? error.message : "unknown")
+    return { ok: false }
   }
 }

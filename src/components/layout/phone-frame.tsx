@@ -15,7 +15,7 @@ function PhoneFrame({ className, children, ...props }: React.ComponentProps<"div
       <div
         data-slot="phone-frame"
         className={cn(
-          "relative flex min-h-dvh w-full flex-col bg-bgDefault text-textPrimary md:h-full md:max-h-211 md:min-h-0 md:w-97.5 md:overflow-y-auto md:rounded-ui-lg md:border md:border-borderDefault md:shadow-lg",
+          "relative flex min-h-dvh w-full flex-col bg-bgDefault text-textPrimary md:h-full md:max-h-211 md:min-h-0 md:w-97.5 md:overflow-y-auto md:overscroll-y-contain md:rounded-ui-lg md:border md:border-borderDefault md:shadow-lg",
           className
         )}
         {...props}

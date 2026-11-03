@@ -4,10 +4,12 @@ import { revalidatePath } from "next/cache"
 import { getUser, requireUserForAction } from "@/server/auth/session"
 import { clientIp, withinRateLimits } from "@/server/security/rate-limit"
 import {
+  countUnreadNotifications,
   createReply,
   deleteOwnReply,
   listReplies,
   listNotifications,
+  markNotificationsRead,
   setFollow,
   setPostFlag,
   type ActivityPage,
@@ -236,6 +238,47 @@ export async function loadActivityAction(filter: unknown, cursor: unknown): Prom
   } catch (error) {
     logFailure("loadActivity", error)
     return { ok: false, error: "server", message: "Could not load more activity." }
+  }
+}
+
+export type UnreadCountResult = { ok: true; count: number } | Failure
+
+/** Number for the bell badge. Signed-out visitors simply have none. */
+export async function getUnreadCountAction(): Promise<UnreadCountResult> {
+  const session = await requireUserForAction()
+  if (!session.ok) return { ok: true, count: 0 }
+
+  const allowed = await withinRateLimits([
+    { name: "activity:unread", key: session.user.id, limit: 120, windowSeconds: 10 * 60 },
+  ])
+  if (!allowed) return RATE_LIMITED
+
+  try {
+    return { ok: true, count: await countUnreadNotifications(session.user.id) }
+  } catch (error) {
+    logFailure("getUnreadCount", error)
+    return SERVER_ERROR
+  }
+}
+
+export type MarkReadResult = { ok: true } | Failure
+
+/** Called when the viewer leaves the Activity page: everything they saw becomes read. */
+export async function markNotificationsReadAction(): Promise<MarkReadResult> {
+  const session = await requireUserForAction()
+  if (!session.ok) return UNAUTHORIZED("Sign in to see your activity.")
+
+  const allowed = await withinRateLimits([
+    { name: "activity:mark-read", key: session.user.id, limit: 60, windowSeconds: 10 * 60 },
+  ])
+  if (!allowed) return RATE_LIMITED
+
+  try {
+    await markNotificationsRead(session.user.id)
+    return { ok: true }
+  } catch (error) {
+    logFailure("markNotificationsRead", error)
+    return SERVER_ERROR
   }
 }
 

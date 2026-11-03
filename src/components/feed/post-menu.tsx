@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useFollow } from "@/components/feed/use-follow"
-import { DotsThreeVertical, Trash, User, UserFill } from "@/components/icons"
+import { DotsThreeVertical, ProhibitInset, Trash, User, UserFill } from "@/components/icons"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { ReportSheet } from "@/components/report/report-sheet"
+import { BlockDialog } from "@/components/shared/block-dialog"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/components/ui/toast"
@@ -46,6 +47,7 @@ function PostMenu({ postId, username, isOwner, following, onDeleted, redirectTo,
   const { toast } = useToast()
   const [confirming, setConfirming] = React.useState(false)
   const [reporting, setReporting] = React.useState(false)
+  const [blocking, setBlocking] = React.useState(false)
   const [pending, startTransition] = React.useTransition()
   const { following: isFollowing, toggle: toggleFollow } = useFollow(username, following)
 
@@ -94,6 +96,14 @@ function PostMenu({ postId, username, isOwner, following, onDeleted, redirectTo,
               <DropdownMenuItem className="min-h-11 gap-2 px-3 text-body-sm whitespace-nowrap" onSelect={() => setReporting(true)}>
                 Report
               </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                className="min-h-11 gap-2 px-3 text-body-sm whitespace-nowrap"
+                onSelect={() => setBlocking(true)}
+              >
+                <ProhibitInset aria-hidden="true" />
+                Block @{username}
+              </DropdownMenuItem>
             </>
           )}
         </DropdownMenuContent>
@@ -117,7 +127,19 @@ function PostMenu({ postId, username, isOwner, following, onDeleted, redirectTo,
           </AlertDialogContent>
         </AlertDialog>
       ) : (
-        <ReportSheet open={reporting} onOpenChange={setReporting} target={{ type: "post", id: postId }} noun={noun} />
+        <>
+          <ReportSheet open={reporting} onOpenChange={setReporting} target={{ type: "post", id: postId }} noun={noun} />
+          <BlockDialog
+            open={blocking}
+            onOpenChange={setBlocking}
+            username={username}
+            onBlocked={() => {
+              onDeleted?.()
+              if (redirectTo) router.replace(redirectTo)
+              else router.refresh()
+            }}
+          />
+        </>
       )}
     </>
   )

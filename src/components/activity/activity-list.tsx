@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useActivityHighlights } from "@/components/activity/activity-highlights"
 import { NotificationItem } from "@/components/activity/notification-item"
 import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
@@ -23,6 +24,20 @@ function ActivityList({ filter, initial }: { filter: ActivityFilter; initial: Ac
   const [cursor, setCursor] = React.useState<string | null>(initial.nextCursor)
   const [status, setStatus] = React.useState<"idle" | "loading" | "error">("idle")
   const [errorMessage, setErrorMessage] = React.useState("")
+  const { ids, remember } = useActivityHighlights()
+
+  // A refresh (pull down) hands over a new first page: take it, and keep what the reader had open.
+  const [seenInitial, setSeenInitial] = React.useState(initial)
+  if (seenInitial !== initial) {
+    setSeenInitial(initial)
+    setItems(initial.items)
+    setCursor(initial.nextCursor)
+  }
+
+  // Whatever is new right now stays highlighted until the reader leaves the page.
+  React.useEffect(() => {
+    remember(initial.items.filter((item) => item.unread).map((item) => item.id))
+  }, [initial, remember])
 
   async function loadMore() {
     if (!cursor || status === "loading") return
@@ -47,7 +62,11 @@ function ActivityList({ filter, initial }: { filter: ActivityFilter; initial: Ac
     <>
       <ul className="flex flex-col">
         {items.map((notification) => (
-          <NotificationItem key={notification.id} notification={notification} />
+          <NotificationItem
+            key={notification.id}
+            notification={notification}
+            highlighted={notification.unread || ids.has(notification.id)}
+          />
         ))}
       </ul>
       {status === "error" ? (

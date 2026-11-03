@@ -5,9 +5,12 @@ import { redirect } from "next/navigation"
 import { z } from "zod"
 import { safeNextPath } from "@/lib/safe-redirect"
 import { auth } from "@/server/auth"
+import { createProfileForUser, isUniqueViolation, isUsernameTaken } from "@/server/services/profile"
+import { processAvatar, storeAvatar } from "@/server/storage/process-image"
 import { emailHasAccount, getSignInMethod, type SignInMethod } from "@/server/services/user"
 import { clientIp, hashKey, withinRateLimits } from "@/server/security/rate-limit"
 import { emailCheckSchema, signInSchema, signUpSchema } from "@/server/validators/auth"
+import { AVATAR_MAX_BYTES, completeOnboardingSchema } from "@/server/validators/profile"
 
 export interface AuthFormState {
   /** Form-level message. Always generic for anything that could reveal an account. */
@@ -125,4 +128,107 @@ export async function continueWithEmailAction(
     return { error: FAILED }
   }
   redirect(afterAuthPath(formData.get("next")))
+}
+
+export interface RegisterState {
+  error?: string
+  /** Which wizard step to send the person back to. */
+  field?: "username" | "name" | "account"
+}
+
+/**
+ * Finishes sign-up for a NEW email: the account is created only now, after the
+ * person has chosen a password and answered every onboarding step. Pipeline:
+ * validate everything, rate limit, check the email is still new and the
+ * username is free, create the account, store the optional picture under the
+ * new user's own folder, create the profile, then go on to `next`.
+ *
+ * Messages stay generic. If the profile cannot be saved after the account was
+ * made, the person lands on the normal /onboarding screen to finish there.
+ */
+export async function registerAccountAction(formData: FormData): Promise<RegisterState> {
+  const credentials = signUpSchema.safeParse({ email: formData.get("email"), password: formData.get("password") })
+  if (!credentials.success) return { error: FAILED, field: "account" }
+
+  let interests: unknown = []
+  try {
+    interests = JSON.parse(String(formData.get("interests") ?? "[]"))
+  } catch {
+    return { error: "Check your details and try again." }
+  }
+  const profileInput = completeOnboardingSchema.safeParse({
+    role: "artist",
+    firstName: formData.get("firstName"),
+    lastName: formData.get("lastName"),
+    middleName: formData.get("middleName") ?? "",
+    username: formData.get("username"),
+    interests,
+    avatarUrl: null,
+    next: null,
+  })
+  if (!profileInput.success) {
+    const path = profileInput.error.issues[0]?.path[0]
+    return {
+      error: profileInput.error.issues[0]?.message ?? "Check your details and try again.",
+      field: path === "username" ? "username" : path === "interests" ? undefined : "name",
+    }
+  }
+
+  const avatar = formData.get("avatar")
+  if (avatar instanceof File && (avatar.size === 0 || avatar.size > AVATAR_MAX_BYTES)) {
+    return { error: "Image must be 2 MB or smaller." }
+  }
+
+  const { email, password } = credentials.data
+  const data = profileInput.data
+  const ip = await clientIp()
+  const allowed = await withinRateLimits([
+    { name: "sign-up:ip", key: ip, limit: 5, windowSeconds: 60 * 60 },
+    { name: "sign-up:ip-burst", key: ip, limit: 2, windowSeconds: 60 },
+    { name: "sign-up:email", key: hashKey(email), limit: 5, windowSeconds: 60 * 60 },
+  ])
+  if (!allowed) return { error: TOO_MANY }
+
+  if (await emailHasAccount(email)) return { error: FAILED, field: "account" }
+  if (await isUsernameTaken(data.username)) return { error: "This username is taken.", field: "username" }
+
+  const displayName = [data.firstName, data.middleName, data.lastName].filter(Boolean).join(" ")
+  let userId: string
+  try {
+    const created = await auth.api.signUpEmail({
+      body: { name: displayName, email, password },
+      headers: await headers(),
+    })
+    userId = created.user.id
+  } catch {
+    console.warn(`[auth] sign-up failed account=${hashKey(email)} ip=${ip} at=${new Date().toISOString()}`)
+    return { error: FAILED, field: "account" }
+  }
+
+  const next = safeNextPath(typeof formData.get("next") === "string" ? (formData.get("next") as string) : null)
+
+  let avatarUrl: string | null = null
+  if (avatar instanceof File && avatar.size > 0) {
+    // A bad or failed picture never blocks the account; it can be added later in Edit profile.
+    try {
+      const processed = await processAvatar(Buffer.from(await avatar.arrayBuffer()))
+      if (processed.ok) avatarUrl = await storeAvatar(userId, processed.data)
+    } catch {
+      avatarUrl = null
+    }
+  }
+
+  try {
+    await createProfileForUser(userId, displayName, {
+      username: data.username,
+      role: data.role,
+      avatarUrl,
+      interests: data.interests,
+      isAdmin: false, // a new password account has an unverified email, which never earns admin
+    })
+  } catch (error) {
+    if (!isUniqueViolation(error)) console.error("[auth] profile create failed after sign-up")
+    redirect(afterAuthPath(next))
+  }
+  redirect(next)
 }

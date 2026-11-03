@@ -1,6 +1,4 @@
 import type { Metadata } from "next"
-import { AppleButton, GoogleButton } from "@/components/auth/provider-buttons"
-import { PortfolioNote } from "@/components/auth/portfolio-note"
 import { CredentialsForm } from "@/components/auth/credentials-form"
 import { safeNextPath } from "@/lib/safe-redirect"
 import { checkEmailAction, continueWithEmailAction } from "@/server/actions/auth"
@@ -23,14 +21,6 @@ export default async function SignInPage({
       action={continueWithEmailAction}
       checkEmail={checkEmailAction}
       next={next}
-      extra={
-        <div className="flex flex-col gap-3">
-          <p className="text-center text-caption text-textSecondary">or</p>
-          <GoogleButton next={next} />
-          <AppleButton />
-          <PortfolioNote />
-        </div>
-      }
     />
   )
 }

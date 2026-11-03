@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { cn } from "@/lib/utils"
 import { createPostAction } from "@/server/actions/posts"
@@ -39,11 +39,35 @@ const PostUploadContext = React.createContext<PostUploadContextValue | null>(nul
 
 const DONE_VISIBLE_MS = 3500
 
+/**
+ * After a post is created, refresh the feed once the reader is on it. Refreshing
+ * straight away can hit the page being left (the composer) while the push to
+ * /feed is still in flight, which leaves the feed showing the old first page.
+ * usePathname suspends on dynamic routes, so this lives in its own boundary.
+ */
+function RefreshFeedWhenPosted({ wanted, onDone }: { wanted: boolean; onDone: () => void }) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const [, startTransition] = React.useTransition()
+  React.useEffect(() => {
+    if (!wanted || pathname !== "/feed") return
+    const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const behavior = smooth ? "smooth" : "instant"
+    window.scrollTo({ top: 0, behavior })
+    document.querySelector('[data-slot="phone-frame"]')?.scrollTo({ top: 0, behavior })
+    startTransition(() => router.refresh())
+    onDone()
+  }, [wanted, pathname, router, onDone])
+  return null
+}
+
 function PostUploadProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [state, setState] = React.useState<UploadState>({ status: "idle" })
   const lastInput = React.useRef<PostUploadInput | null>(null)
   const running = React.useRef(false)
+  const [refreshWanted, setRefreshWanted] = React.useState(false)
+  const refreshDone = React.useCallback(() => setRefreshWanted(false), [])
   const hideTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearTimer = () => {
@@ -93,7 +117,7 @@ function PostUploadProvider({ children }: { children: React.ReactNode }) {
 
         lastInput.current = null
         setState({ status: "done" })
-        router.refresh()
+        setRefreshWanted(true)
         hideTimer.current = setTimeout(() => setState({ status: "idle" }), DONE_VISIBLE_MS)
       } catch {
         fail("Check your connection.")
@@ -120,7 +144,14 @@ function PostUploadProvider({ children }: { children: React.ReactNode }) {
     [state, run]
   )
 
-  return <PostUploadContext.Provider value={value}>{children}</PostUploadContext.Provider>
+  return (
+    <PostUploadContext.Provider value={value}>
+      {children}
+      <React.Suspense fallback={null}>
+        <RefreshFeedWhenPosted wanted={refreshWanted} onDone={refreshDone} />
+      </React.Suspense>
+    </PostUploadContext.Provider>
+  )
 }
 
 function usePostUpload() {

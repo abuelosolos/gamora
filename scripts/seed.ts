@@ -104,6 +104,12 @@ interface DemoJob {
   title: string
   summary: string
   description: string
+  category: string
+  medium: "digital" | "traditional" | "sculpture" | "paper" | "mixed"
+  artStyles: string[]
+  deliverables: string[]
+  requirements: string[]
+  timeline: string
   posterName: string
   jobType: "full_time" | "part_time" | "contract" | "freelance"
   payAmount: number
@@ -117,7 +123,22 @@ const JOBS: DemoJob[] = [
     title: "Fantasy Novel Cover Art",
     summary: "Pixel artist needed for a minecraft fantasy novel series cover",
     description:
-      "We are a small indie press looking for a pixel artist to paint covers for a three-book fantasy series set in a blocky, Minecraft-inspired world.\n\nYou would deliver one cover per book, plus a wide banner crop for each. Send us works that show your pixel and fantasy scenes.",
+      "We are a small indie press with a three-book fantasy series set in a blocky, Minecraft-inspired world, and we want the covers to feel like a single collectible set. Each cover shows one hero moment from the book: a lone traveller at a cliff edge, a village lit by torches, a dragon over a pixel sea.\n\nWe will send the manuscript summary, character notes and a colour mood for each book. You send a rough thumbnail first, then a detailed sketch, then final art. We care most about readable silhouettes at thumbnail size, because the covers will sit in small store listings.",
+    category: "Book cover",
+    medium: "digital",
+    artStyles: ["Pixel art", "Fantasy", "Low-Poly Art"],
+    deliverables: [
+      "Three front covers at 1600 x 2560 px, one per book",
+      "A wide banner crop of each cover for the store page",
+      "Layered source files (PSD or Aseprite)",
+      "Two rounds of changes per cover",
+    ],
+    requirements: [
+      "A portfolio with finished pixel art scenes, not only sprites",
+      "Comfort with limited palettes (32 colours or fewer)",
+      "Able to take art direction and send work in progress",
+    ],
+    timeline: "12 weeks, one cover every 4 weeks",
     posterName: "Anna Stacy Huh",
     jobType: "full_time",
     payAmount: 200,
@@ -127,7 +148,21 @@ const JOBS: DemoJob[] = [
     title: "Mystery Thriller Book Cover Design",
     summary: "Graphic designer sought for a gripping mystery thriller series cover",
     description:
-      "A thriller series needs a consistent look: dark palettes, bold type and one striking central image per cover.\n\nPart time, spread over a few weeks. Show us covers or posters that carry a mood.",
+      "A thriller series needs a consistent look from book to book: dark palettes, bold type and one striking central image per cover. Think a single object or a lone figure, lots of negative space, a title you can read from across a room.\n\nThis is part-time work spread over a few weeks. We will share the blurbs and a few reference covers we like and a few we do not. You propose two directions for the first book; once we pick one, the rest of the series follows the same grid.",
+    category: "Book cover",
+    medium: "digital",
+    artStyles: ["Typography", "Photo manipulation", "Minimal"],
+    deliverables: [
+      "Two cover directions for book one, then the chosen one finished",
+      "A reusable template for the rest of the series",
+      "Print-ready PDF (with bleed) and an e-book JPG for each cover",
+    ],
+    requirements: [
+      "Strong typography; show us covers or posters where the title carries the design",
+      "Experience preparing files for print",
+      "Comfortable with dark, moody colour",
+    ],
+    timeline: "5 weeks, about 10 hours a week",
     posterName: "Liam Rodriguez",
     jobType: "part_time",
     payAmount: 150,
@@ -137,7 +172,21 @@ const JOBS: DemoJob[] = [
     title: "Sci-Fi Graphic Novel Illustrations",
     summary: "Illustrator needed for a futuristic sci-fi graphic novel",
     description:
-      "Full-page and spot illustrations for a futuristic graphic novel. You will work from a script and character sheets, and we review sketches before final art.\n\nContract work, paid per finished illustration.",
+      "Full-page and spot illustrations for a futuristic graphic novel about a salvage crew on a dying orbital station. You will work from a script and character sheets, and we review sketches before final art so nothing is wasted.\n\nThe look is clean linework with painterly colour and strong lighting: neon against steel, small figures in huge rooms. Pages are reviewed in batches of five.",
+    category: "Illustration",
+    medium: "digital",
+    artStyles: ["Digital painting", "Concept art", "Sci-fi"],
+    deliverables: [
+      "40 full-page illustrations and about 25 spot illustrations",
+      "Sketch and flat-colour approval stages for every batch",
+      "Final files at 300 dpi, A5 trim size",
+    ],
+    requirements: [
+      "Examples of environments and figures in the same image",
+      "Reliable pace: five finished pages every two weeks",
+      "Able to keep characters consistent across many pages",
+    ],
+    timeline: "5 months in batches of five pages",
     posterName: "Sophie Chen",
     jobType: "contract",
     payAmount: 250,
@@ -147,7 +196,16 @@ const JOBS: DemoJob[] = [
     title: "Romantic Comedy E-Book Cover",
     summary: "Designer required for a lighthearted romantic comedy e-book cover",
     description:
-      "One bright, playful cover for a romantic comedy e-book, in a flat illustrated style. Two rounds of changes are included.",
+      "One bright, playful cover for a romantic comedy e-book, in a flat illustrated style: two characters, a coffee shop, warm colours and a hand-lettered title. The tone is cosy and a little silly, never glossy.\n\nWe will give you the blurb, the characters' looks and three covers we admire. Two rounds of changes are included.",
+    category: "Book cover",
+    medium: "digital",
+    artStyles: ["Flat colour", "Cartoon art", "Hand lettering"],
+    deliverables: ["One e-book cover at 1600 x 2560 px", "A square version for social posts", "Source file"],
+    requirements: [
+      "Flat, friendly illustration with warm palettes",
+      "Hand lettering or custom title type",
+    ],
+    timeline: "2 weeks",
     posterName: "James Patel",
     jobType: "freelance",
     payAmount: 100,
@@ -157,7 +215,20 @@ const JOBS: DemoJob[] = [
     title: "Character Designs for a Card Game",
     summary: "Cartoon artist wanted for twelve original card game characters",
     description:
-      "A tabletop card game needs twelve original characters with clear silhouettes and strong colour. We supply short descriptions; you supply the look.",
+      "A tabletop card game needs twelve original characters with clear silhouettes and strong colour. We supply short descriptions (a grumpy baker, a wizard who is afraid of birds); you supply the look, the poses and the personality.\n\nCharacters appear on cards about 6 cm tall, so shapes must read small. Expressions matter more than detail.",
+    category: "Character design",
+    medium: "digital",
+    artStyles: ["Cartoon art", "Character design", "Vector"],
+    deliverables: [
+      "Twelve full-colour characters, one pose each",
+      "Two alternate expressions per character",
+      "Transparent PNG and vector source for every character",
+    ],
+    requirements: [
+      "A portfolio of original characters with different body shapes",
+      "Bold outlines and flat or cel shading",
+    ],
+    timeline: "6 weeks, two characters a week",
     posterName: "Maya Okafor",
     jobType: "freelance",
     payAmount: 80,
@@ -167,7 +238,13 @@ const JOBS: DemoJob[] = [
     title: "Animated Logo Loop",
     summary: "Animator needed for a short looping logo for a podcast",
     description:
-      "A three-second looping animation of an existing logo, delivered as a video and a GIF. Simple motion, polished timing.",
+      "A three-second looping animation of an existing logo, delivered as a video and a GIF. The motion should be simple and satisfying: the logo breathes, a sound-wave ripples through it and it settles back to the first frame so the loop is seamless.\n\nWe will send the logo as vector art and a few reference loops. Polished timing matters more than complexity.",
+    category: "Animation",
+    medium: "digital",
+    artStyles: ["Animations", "Motion graphics", "Minimal"],
+    deliverables: ["A 3-second seamless loop as MP4 (1080 x 1080)", "The same loop as a GIF under 5 MB", "The project file"],
+    requirements: ["Show us at least one seamless loop you made", "Comfort with After Effects or similar"],
+    timeline: "1 week",
     posterName: "Daniel Reyes",
     jobType: "contract",
     payAmount: 300,
@@ -177,7 +254,13 @@ const JOBS: DemoJob[] = [
     title: "Weekly Webcomic Panels",
     summary: "Comic artist for a weekly four-panel webcomic",
     description:
-      "A weekly four-panel comic with a steady cast. Scripts arrive on Mondays and finished panels are due by Friday.",
+      "A weekly four-panel comic with a steady cast of five characters and a gentle, deadpan sense of humour. Scripts arrive on Mondays and finished panels are due by Friday, so we need someone who is happy to work to a steady rhythm.\n\nThe style is loose ink linework with a limited watercolour wash. You can draw on paper and scan, or imitate the look digitally.",
+    category: "Comics",
+    medium: "mixed",
+    artStyles: ["Ink linework", "Watercolour", "Cartoon art"],
+    deliverables: ["One four-panel strip every week", "Clean lettering with speech balloons", "Print-resolution scans or exports (600 dpi)"],
+    requirements: ["Past comic strips or sequential work", "A reliable weekly schedule", "Consistent character drawing"],
+    timeline: "Ongoing, 12 strips to start",
     posterName: "Ines Moreau",
     jobType: "part_time",
     payAmount: 120,
@@ -187,11 +270,64 @@ const JOBS: DemoJob[] = [
     title: "Profile Pictures for a Community",
     summary: "Pfp artist needed for a set of twenty community avatars",
     description:
-      "Twenty matching profile pictures for an online art community, all on the same grid and palette so they look like a set.",
+      "Twenty matching profile pictures for an online art community, all on the same grid and palette so they look like a set when displayed side by side. Each avatar is a bust with a different hat, hair or accessory, on a flat coloured background.\n\nWe will give you the palette (eight colours) and a list of traits. Variety comes from the traits, not from changing the style.",
+    category: "Avatars",
+    medium: "digital",
+    artStyles: ["Pixel art", "Flat colour", "Indie art"],
+    deliverables: ["Twenty avatars at 512 x 512 px", "A single sheet showing the whole set", "Source files with traits on separate layers"],
+    requirements: ["Strictly consistent style across a series", "Experience with pixel or flat vector avatars"],
+    timeline: "3 weeks",
     posterName: "Tunde Bello",
     jobType: "full_time",
     payAmount: 60,
     payUnit: "Avatar",
+  },
+  {
+    title: "Clay Mascot Sculptures",
+    summary: "Sculptor needed for three handmade clay mascots for a bakery",
+    description:
+      "A neighbourhood bakery wants three small hand-sculpted mascots (a bun, a croissant and a pretzel, each with a face) to sit by the till and appear in photos on its website. They should feel chunky, friendly and slightly wonky, clearly made by hand.\n\nYou sculpt in polymer or air-dry clay, paint and seal them, and photograph each one from four angles so we can use them online. Pieces are about 12 cm tall.",
+    category: "Sculpture",
+    medium: "sculpture",
+    artStyles: ["Sculptures", "Handmade", "Cartoon art"],
+    deliverables: [
+      "Three finished, painted and sealed clay sculptures, about 12 cm tall",
+      "Four photos of each on a plain background",
+      "Safe packaging and delivery to the bakery",
+    ],
+    requirements: [
+      "Photos of clay or small sculpture work you have made",
+      "Based within a day's travel of the bakery, or happy to ship insured",
+      "Smooth, durable paint finish",
+    ],
+    timeline: "4 weeks, with a photo check-in after the first sculpture",
+    posterName: "Rosa Lindqvist",
+    jobType: "contract",
+    payAmount: 180,
+    payUnit: "Sculpture",
+  },
+  {
+    title: "Paper Cut Window Display",
+    summary: "Paper artist for a layered paper-cut display of a forest scene",
+    description:
+      "A children's bookshop wants a layered paper-cut forest for its front window: tall trees, a fox, owls and a winding path, built in five depth layers so it casts soft shadows when lit from behind.\n\nYou design the scene, cut and assemble it in a frame about 90 x 60 cm, and install it in the shop. Colours stay within a warm autumn palette; the paper must be acid-free so it lasts the season.",
+    category: "Paper craft",
+    medium: "paper",
+    artStyles: ["Paper cut", "Layered", "Illustration"],
+    deliverables: [
+      "A sketch and colour plan for approval before cutting",
+      "One framed, five-layer paper-cut scene, about 90 x 60 cm",
+      "Installation in the shop window, and a photo set for the shop's social pages",
+    ],
+    requirements: [
+      "Examples of layered paper-cut or paper-craft pieces",
+      "Experience framing or mounting delicate work",
+    ],
+    timeline: "5 weeks, installation in week 5",
+    posterName: "Pieter van Dijk",
+    jobType: "freelance",
+    payAmount: 400,
+    payUnit: "Display",
   },
 ]
 

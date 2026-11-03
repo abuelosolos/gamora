@@ -3,8 +3,8 @@
 import * as React from "react"
 import Link from "next/link"
 import { useFollow } from "@/components/feed/use-follow"
+import { ShareSheet } from "@/components/shared/share-sheet"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/toast"
 
 /**
  * Figma: FollowCount, then the bio, then Edit/Share (own profile) or
@@ -53,21 +53,11 @@ function ProfileSocial({
   subscriberCount,
   children,
 }: ProfileSocialProps) {
-  const { toast } = useToast()
   const { following, toggle } = useFollow(username, viewerFollows)
 
   // The server count already includes the viewer's follow if there was one.
   const delta = Number(following) - Number(viewerFollows)
   const followers = Math.max(0, followerCount + delta)
-
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/u/${username}`)
-      toast({ variant: "success", title: "Link copied" })
-    } catch {
-      toast({ variant: "error", title: "Could not copy the link" })
-    }
-  }
 
   return (
     <>
@@ -82,9 +72,11 @@ function ProfileSocial({
       <div className="flex items-center gap-3 px-5 py-2.5">
         {isOwner ? (
           <>
-            <Button variant="secondary" className="min-w-0 flex-1" onClick={() => void copyLink()}>
-              Share
-            </Button>
+            <ShareSheet path={`/u/${username}`} title={`@${username} on Gamora`}>
+              <Button variant="secondary" className="min-w-0 flex-1">
+                Share
+              </Button>
+            </ShareSheet>
             <Button asChild variant="outline-accent" className="min-w-0 flex-1">
               <Link href="/settings/profile">Edit Profile</Link>
             </Button>

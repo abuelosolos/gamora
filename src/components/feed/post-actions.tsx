@@ -12,8 +12,8 @@ import {
   ShareNetwork,
 } from "@/components/icons"
 import { usePostInteractions } from "@/components/feed/post-interactions"
+import { ShareSheet } from "@/components/shared/share-sheet"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/toast"
 import { cn } from "@/lib/utils"
 import type { PostView } from "@/server/services/posts"
 
@@ -38,18 +38,7 @@ function Count({ value }: { value: number }) {
 }
 
 function PostActions({ post, onReply }: { post: PostView; onReply?: () => void }) {
-  const { toast } = useToast()
   const { like, repost, bookmark } = usePostInteractions()
-
-  async function copyLink() {
-    const url = `${window.location.origin}/post/${post.id}`
-    try {
-      await navigator.clipboard.writeText(url)
-      toast({ variant: "success", title: "Link copied" })
-    } catch {
-      toast({ variant: "error", title: "Could not copy the link" })
-    }
-  }
 
   return (
     <div className="-mx-2.5 flex items-center justify-between" role="group" aria-label="Post actions">
@@ -106,9 +95,11 @@ function PostActions({ post, onReply }: { post: PostView; onReply?: () => void }
         >
           {bookmark.on ? <BookmarkSimpleFill aria-hidden="true" /> : <BookmarkSimple aria-hidden="true" />}
         </Button>
-        <Button variant="ghost" size="sm" aria-label="Copy link to post" className={item} onClick={() => void copyLink()}>
-          <ShareNetwork aria-hidden="true" />
-        </Button>
+        <ShareSheet path={`/post/${post.id}`} title={`Post by ${post.author.name}`}>
+          <Button variant="ghost" size="sm" aria-label="Share post" className={item}>
+            <ShareNetwork aria-hidden="true" />
+          </Button>
+        </ShareSheet>
       </div>
     </div>
   )

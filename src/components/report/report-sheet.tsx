@@ -2,10 +2,10 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { SealCheck, X } from "@/components/icons"
+import { SealCheck } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import { chipVariants } from "@/components/ui/chip"
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import { createReportAction } from "@/server/actions/reports"
@@ -81,12 +81,7 @@ function ReportSheet({ open, onOpenChange, target, noun }: ReportSheetProps) {
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className="max-h-[90dvh]">
-        <div className="flex items-center justify-between px-5 pt-1">
-          <SheetClose asChild>
-            <Button variant="ghost" size="icon" aria-label="Close" className="-ml-2.5">
-              <X aria-hidden="true" className="size-6" />
-            </Button>
-          </SheetClose>
+        <div className="flex items-center justify-end px-5 pt-1">
           {done ? null : (
             <button
               type="submit"

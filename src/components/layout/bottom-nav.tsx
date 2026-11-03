@@ -23,6 +23,8 @@ export interface BottomNavProps extends React.ComponentProps<"nav"> {
   activeHref?: string
   /** Show the text label under each icon (Figma Default variant). */
   showLabels?: boolean
+  /** Unread activity count shown on the bell. Hidden at 0. */
+  activityBadge?: number
 }
 
 const ITEMS = [
@@ -39,7 +41,7 @@ function isActive(current: string, href: string): boolean {
   return current === href || current.startsWith(`${href}/`)
 }
 
-function BottomNav({ activeHref, showLabels = false, className, ...props }: BottomNavProps) {
+function BottomNav({ activeHref, showLabels = false, activityBadge = 0, className, ...props }: BottomNavProps) {
   const pathname = usePathname()
   const current = activeHref ?? pathname
 
@@ -70,7 +72,18 @@ function BottomNav({ activeHref, showLabels = false, className, ...props }: Bott
                   active ? "text-accentDefault" : "text-textSecondary hover:text-textPrimary"
                 )}
               >
-                <Glyph aria-hidden="true" className="size-7.5" />
+                <span className="relative">
+                  <Glyph aria-hidden="true" className="size-7.5" />
+                  {href === "/activity" && activityBadge > 0 ? (
+                    <span
+                      role="status"
+                      aria-label={`${activityBadge} unread`}
+                      className="absolute -top-1 -right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-statusError px-1 text-caption leading-none font-medium text-textOnAccent"
+                    >
+                      <span aria-hidden="true">{activityBadge > 9 ? "9+" : activityBadge}</span>
+                    </span>
+                  ) : null}
+                </span>
                 {showLabels ? <span className="text-caption">{label}</span> : null}
               </Link>
             </li>

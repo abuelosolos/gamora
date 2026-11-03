@@ -18,6 +18,13 @@ export function useFollow(username: string, initial: boolean) {
   const [following, setFollowing] = React.useState(initial)
   const busy = React.useRef(false)
 
+  // A refresh (pull down) can change who the viewer follows: take the server's answer.
+  const [seenInitial, setSeenInitial] = React.useState(initial)
+  if (seenInitial !== initial) {
+    setSeenInitial(initial)
+    setFollowing(initial)
+  }
+
   const toggle = React.useCallback(async () => {
     if (busy.current) return
     busy.current = true

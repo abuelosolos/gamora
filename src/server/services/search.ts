@@ -2,6 +2,7 @@ import "server-only"
 import { and, desc, eq, notInArray, sql, type SQL } from "drizzle-orm"
 import { db } from "@/server/db"
 import { profile, searchHistory, user } from "@/server/db/schema"
+import { notBlockedWith } from "@/server/services/blocks"
 import { SEARCH_HISTORY_MAX, SEARCH_RESULTS_MAX, type SearchInput } from "@/server/validators/search"
 
 /** What a result may show. No email, no user id, no admin flag. */
@@ -23,8 +24,13 @@ function escapeLike(value: string): string {
  * exact username, then names/usernames that start with the text, then the rest,
  * alphabetical inside each group.
  */
-export async function searchPeople({ query, category }: SearchInput): Promise<PersonResult[]> {
+export async function searchPeople(
+  { query, category }: SearchInput,
+  viewerId: string | null = null,
+): Promise<PersonResult[]> {
   const conditions: SQL[] = []
+  const hidden = notBlockedWith(viewerId, profile.userId)
+  if (hidden) conditions.push(hidden)
   let rank: SQL = sql`0`
 
   if (query !== undefined) {

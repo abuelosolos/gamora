@@ -5,7 +5,7 @@ import { CaretLeft } from "@/components/icons"
 import { JobDetailSkeleton, JobDetailView } from "@/components/jobs/job-detail"
 import { TopBar, TopBarButton } from "@/components/layout/top-bar"
 import { requireUser } from "@/server/auth/session"
-import { getJob, listPortfolioPieces } from "@/server/services/jobs"
+import { getJob } from "@/server/services/jobs"
 import { jobIdSchema } from "@/server/validators/jobs"
 
 // Private. No Figma frame: see JobDetailView. Apply is a sheet on this page
@@ -37,8 +37,8 @@ async function JobContent({ params }: { params: PageProps<"/jobs/[id]">["params"
   if (!parsed.success) notFound()
 
   const user = await requireUser()
-  const [job, pieces] = await Promise.all([getJob(parsed.data, user.id), listPortfolioPieces(user.id)])
+  const job = await getJob(parsed.data, user.id)
   if (!job) notFound()
 
-  return <JobDetailView job={job} pieces={pieces} />
+  return <JobDetailView job={job} />
 }

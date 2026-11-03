@@ -29,9 +29,10 @@
   --statusError: #b91c1c;
   --statusInfo: #0369a1;
   --overlayScrim: #00000066;
-  /* Brand mark. Same in every theme. Source: src/assets/logo */
-  --logoPrimary: #0e3dcf;
-  --logoSecondary: #4478fd;
+  /* Brand mark. The dark parts follow the accent; the light parts use a lighter
+     shade of the accent made for the logo alone. Source: src/assets/logo */
+  --logoPrimary: var(--accentDefault);
+  --logoSecondary: #6b93f5;
 }
 
 [data-theme="dark"] {
@@ -54,9 +55,10 @@
   --statusError: #f87171;
   --statusInfo: #38bdf8;
   --overlayScrim: #000000b3;
-  /* Brand mark. Same in every theme. Source: src/assets/logo */
-  --logoPrimary: #0e3dcf;
-  --logoSecondary: #4478fd;
+  /* Brand mark. The dark parts follow the accent; the light parts use a lighter
+     shade of the accent made for the logo alone. Source: src/assets/logo */
+  --logoPrimary: var(--accentDefault);
+  --logoSecondary: #93c5fd;
 }
 
 [data-theme="black"] {
@@ -79,9 +81,10 @@
   --statusError: #f87171;
   --statusInfo: #38bdf8;
   --overlayScrim: #000000cc;
-  /* Brand mark. Same in every theme. Source: src/assets/logo */
-  --logoPrimary: #0e3dcf;
-  --logoSecondary: #4478fd;
+  /* Brand mark. The dark parts follow the accent; the light parts use a lighter
+     shade of the accent made for the logo alone. Source: src/assets/logo */
+  --logoPrimary: var(--accentDefault);
+  --logoSecondary: #8cc0ff;
 }
 
 [data-theme="blue"] {
@@ -104,9 +107,10 @@
   --statusError: #fb7185;
   --statusInfo: #93c5fd;
   --overlayScrim: #040a1ab3;
-  /* Brand mark. Same in every theme. Source: src/assets/logo */
-  --logoPrimary: #0e3dcf;
-  --logoSecondary: #4478fd;
+  /* Brand mark. The dark parts follow the accent; the light parts use a lighter
+     shade of the accent made for the logo alone. Source: src/assets/logo */
+  --logoPrimary: var(--accentDefault);
+  --logoSecondary: #bae6fd;
 }
 
 [data-theme="cream"] {
@@ -129,9 +133,10 @@
   --statusError: #b42318;
   --statusInfo: #1d5f99;
   --overlayScrim: #1a1408a6;
-  /* Brand mark. Same in every theme. Source: src/assets/logo */
-  --logoPrimary: #0e3dcf;
-  --logoSecondary: #4478fd;
+  /* Brand mark. The dark parts follow the accent; the light parts use a lighter
+     shade of the accent made for the logo alone. Source: src/assets/logo */
+  --logoPrimary: var(--accentDefault);
+  --logoSecondary: #4f9a6c;
 }
 
 /*

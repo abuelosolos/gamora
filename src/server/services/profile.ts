@@ -2,6 +2,7 @@ import "server-only"
 import { and, count, eq } from "drizzle-orm"
 import { cache } from "react"
 import { db } from "@/server/db"
+import { isBlockedEither } from "@/server/services/blocks"
 import { follows, profile, user, type NewProfile } from "@/server/db/schema"
 
 /** The profile row, or null when the user has not finished onboarding. */
@@ -69,6 +70,8 @@ export async function getPublicProfile(username: string, viewerId: string | null
   if (!row) return null
 
   const isOwner = viewerId !== null && viewerId === row.userId
+  // Hidden both ways: blocked either way looks the same as a missing profile.
+  if (viewerId && !isOwner && (await isBlockedEither(viewerId, row.userId))) return null
   const [followers, following, viewerRow] = await Promise.all([
     db.select({ n: count() }).from(follows).where(eq(follows.followingId, row.userId)),
     db.select({ n: count() }).from(follows).where(eq(follows.followerId, row.userId)),

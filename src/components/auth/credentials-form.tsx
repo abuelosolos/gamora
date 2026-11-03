@@ -4,6 +4,7 @@ import * as React from "react"
 import { useActionState } from "react"
 import { AuthScreen } from "@/components/auth/auth-screen"
 import { GoogleButton } from "@/components/auth/provider-buttons"
+import { OnboardingFlow } from "@/components/onboarding/onboarding-flow"
 import { Button } from "@/components/ui/button"
 import { PasswordField } from "@/components/ui/password-field"
 import { TextField } from "@/components/ui/text-field"
@@ -13,9 +14,11 @@ import type { AuthFormState, CheckEmailResult } from "@/server/actions/auth"
  * Email-first sign-in. Step 1 asks for the email and the server answers with one
  * word: "password" (existing account: enter the password), "google" (the account
  * uses Google: show the Google button) or "new" (create a password of at least 10
- * characters). Steps 2 sign in or create the account through the same existing
- * action, which lands on onboarding. The actions are passed in; this component
- * only renders what they return. Form-level errors are generic by design (see
+ * characters). An existing account signs in through the passed action. A NEW
+ * email does not create anything yet: after the password it goes through the
+ * onboarding steps (role, name, username, picture, interests) and the account is
+ * created at the very end (registerAccountAction). This component only renders
+ * what the actions return. Form-level errors are generic by design (see
  * src/server/actions/auth.ts).
  */
 export interface CredentialsFormProps {
@@ -43,6 +46,8 @@ function CredentialsForm({ action, checkEmail, next, extra }: CredentialsFormPro
   const [state, formAction, signing] = useActionState(action, {})
   const [password, setPassword] = React.useState("")
   const [shortError, setShortError] = React.useState("")
+  // New account: password chosen, now answering the onboarding steps.
+  const [onboarding, setOnboarding] = React.useState(false)
 
   function submitEmail(event: React.FormEvent) {
     event.preventDefault()
@@ -65,9 +70,15 @@ function CredentialsForm({ action, checkEmail, next, extra }: CredentialsFormPro
   }
 
   function backToEmail() {
+    setOnboarding(false)
     setStep({ kind: "email" })
     setPassword("")
     setShortError("")
+  }
+
+  // ---- New account, after the password: the onboarding steps, then the account is created ----
+  if (onboarding && step.kind === "new") {
+    return <OnboardingFlow next={next} signup={{ email: step.email, password, onExit: () => setOnboarding(false) }} />
   }
 
   // ---- Step 1: email ----
@@ -144,7 +155,7 @@ function CredentialsForm({ action, checkEmail, next, extra }: CredentialsFormPro
       onBack={backToEmail}
       footer={
         <Button type="submit" form={formId} fullWidth loading={signing} className="min-h-15 rounded-ui-lg">
-          {isNew ? "Create account" : "Sign in"}
+          {isNew ? "Continue" : "Sign in"}
         </Button>
       }
     >
@@ -153,10 +164,11 @@ function CredentialsForm({ action, checkEmail, next, extra }: CredentialsFormPro
         action={formAction}
         noValidate
         onSubmit={(event) => {
-          if (isNew && password.length < NEW_PASSWORD_MIN) {
-            event.preventDefault()
-            setShortError(`Use at least ${NEW_PASSWORD_MIN} characters.`)
-          }
+          if (!isNew) return
+          // A new account is not created here; the onboarding steps come first.
+          event.preventDefault()
+          if (password.length < NEW_PASSWORD_MIN) setShortError(`Use at least ${NEW_PASSWORD_MIN} characters.`)
+          else setOnboarding(true)
         }}
         className="flex flex-col gap-5"
       >
@@ -181,9 +193,11 @@ function CredentialsForm({ action, checkEmail, next, extra }: CredentialsFormPro
             {state.error}
           </p>
         ) : null}
-        <Button type="button" variant="ghost" onClick={backToEmail} className="self-start">
-          Use a different email
-        </Button>
+        {isNew ? null : (
+          <Button type="button" variant="ghost" onClick={backToEmail} className="self-start">
+            Use a different email
+          </Button>
+        )}
       </form>
     </AuthScreen>
   )
