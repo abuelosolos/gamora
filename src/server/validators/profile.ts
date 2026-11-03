@@ -41,7 +41,7 @@ export const interestsSchema = z
   .max(MAX_INTERESTS, `Choose up to ${MAX_INTERESTS}.`)
   .transform((list) => [...new Set(list)])
 
-export const completeOnboardingSchema = z.object({
+export const completeOnboardingSchema = z.strictObject({
   role: roleSchema,
   firstName: nameSchema.shape.firstName,
   lastName: nameSchema.shape.lastName,

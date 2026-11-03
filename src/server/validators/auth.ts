@@ -8,7 +8,7 @@ const email = z
   .pipe(z.email("Enter a valid email address."))
 
 /** Sign-up. The length matches Better Auth's minPasswordLength. */
-export const signUpSchema = z.object({
+export const signUpSchema = z.strictObject({
   email,
   password: z
     .string()
@@ -20,7 +20,7 @@ export const signUpSchema = z.object({
  * Sign-in only checks shape. It never tells the user which part was wrong, and
  * does not enforce the sign-up length so old accounts are not locked out.
  */
-export const signInSchema = z.object({
+export const signInSchema = z.strictObject({
   email,
   password: z.string().min(1, "Enter your password.").max(128),
 })

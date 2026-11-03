@@ -46,10 +46,15 @@ export async function withinRateLimits(rules: RateLimitRule[]): Promise<boolean>
   try {
     for (const rule of rules) {
       const result = await getLimiter(rule.name, rule.limit, rule.windowSeconds).limit(rule.key)
-      if (!result.success) return false
+      if (!result.success) {
+        // Section 8 logging: who (a user id, IP or hashed email, never a raw email) and when.
+        console.warn(`[rate-limit] blocked rule=${rule.name} key=${rule.key} at=${new Date().toISOString()}`)
+        return false
+      }
     }
     return true
-  } catch {
+  } catch (error) {
+    console.error("[rate-limit] check failed, refusing", error instanceof Error ? error.message : "unknown")
     return false
   }
 }

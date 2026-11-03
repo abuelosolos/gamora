@@ -5,7 +5,7 @@ import { z } from "zod"
  * always the session user's. `confirm` must be literally true, so a stray or
  * empty request body cannot delete anything.
  */
-export const deleteAccountSchema = z.object({
+export const deleteAccountSchema = z.strictObject({
   confirm: z.literal(true),
 })
 

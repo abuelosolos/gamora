@@ -1,0 +1,17 @@
+# Section 8, Dependencies: weekly update PRs for npm packages and for the Actions used in CI.
+# Dependabot alerts and security updates also need switching on in the repository's
+# Settings > Advanced Security (a repository setting, not a file).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
