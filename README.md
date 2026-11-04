@@ -1,6 +1,6 @@
 # Gamora
 
-Gamora is a social platform for artists. Artists sign up, post their work, follow each other, and browse a job wall. It is a portfolio project: the artist side is real and live, and everything on the hiring and money side is marked "Coming soon".
+Gamora is a mobile social platform for artists. Artists sign up, post their work, follow each other, and browse a job wall. It is a portfolio project: the artist side is real and live, and everything on the hiring and money side is marked "Coming soon".
 
 Live site: <gamora-xi.vercel.app>
 
