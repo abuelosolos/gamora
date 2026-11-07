@@ -16,6 +16,9 @@ import { safeNextPath } from "@/lib/safe-redirect";
 const PUBLIC_EXACT = ["/", "/sign-in", "/sign-up", "/terms", "/privacy"];
 const PUBLIC_PREFIXES = ["/api/auth", "/api/health", "/feed", "/post", "/u", "/unavailable"];
 const AUTH_PAGES = ["/sign-in", "/sign-up"];
+// The welcome page is for signed-out visitors; a signed-in user goes to the feed
+// (public, so a stale cookie cannot cause a redirect loop).
+const SIGNED_OUT_ONLY = ["/", ...AUTH_PAGES];
 
 function isUnder(pathname: string, base: string): boolean {
   return pathname === base || pathname.startsWith(`${base}/`);
@@ -43,7 +46,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (hasSession && AUTH_PAGES.includes(pathname)) {
+  if (hasSession && SIGNED_OUT_ONLY.includes(pathname)) {
     const target = safeNextPath(request.nextUrl.searchParams.get("next"));
     return NextResponse.redirect(new URL(target, request.url));
   }

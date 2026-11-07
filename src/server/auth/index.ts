@@ -27,7 +27,10 @@ export const auth = betterAuth({
     },
   },
   session: {
-    expiresIn: 60 * 60 * 24 * 7,
+    // Sliding: a visit at least a day after the last refresh pushes the expiry
+    // 30 days out again (page renders cannot write cookies, so SessionKeepAlive
+    // triggers the refresh through the get-session route).
+    expiresIn: 60 * 60 * 24 * 30,
     updateAge: 60 * 60 * 24,
     cookieCache: { enabled: true, maxAge: 5 * 60 },
   },
