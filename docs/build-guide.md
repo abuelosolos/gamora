@@ -576,7 +576,7 @@ Auth is real: people sign up with email and password or Google, and every post b
 
 | Layer | Where | What it does |
 | --- | --- | --- |
-| 1. Middleware | `src/middleware.ts` (`proxy.ts` on Next.js 16) | Fast check for a session cookie. Redirects signed-out visitors away from private routes. This is a convenience only, never the real protection. |
+| 1. Middleware | `src/middleware.ts` (`proxy.ts` on Next.js 16) | Fast check for a session cookie. Redirects signed-out visitors away from private routes and signed-in visitors from `/`, `/sign-in` and `/sign-up` to the feed. This is a convenience only, never the real protection. |
 | 2. Layout check | `app/(app)/layout.tsx` | Loads the real session on the server. No valid session means redirect to sign-in. |
 | 3. Action check | every server action | Calls `requireUser()` before doing anything. |
 | 4. Ownership check | every edit or delete | Confirms the row belongs to the signed-in user (or the user is an admin). |
@@ -614,7 +614,7 @@ export const auth = betterAuth({
     },
   },
   session: {
-    expiresIn: 60 * 60 * 24 * 7,
+    expiresIn: 60 * 60 * 24 * 30, // sliding, refreshed by SessionKeepAlive
     updateAge: 60 * 60 * 24,
     cookieCache: { enabled: true, maxAge: 5 * 60 },
   },
@@ -837,7 +837,7 @@ The goal is to handle what a real app faces: bots, scrapers, people guessing pas
 | Area | What to do | Where |
 | --- | --- | --- |
 | Security headers | Content-Security-Policy (default-src 'self', allow your Blob domain for images, no inline scripts beyond what Next needs), Strict-Transport-Security, X-Content-Type-Options nosniff, frame-ancestors 'none' (blocks clickjacking), Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy that turns off camera, mic, geolocation | `next.config.ts` headers |
-| Passwords and sessions | Handled by Better Auth (hashed passwords, httpOnly sameSite cookies, secure in production). Minimum length 10. Session expires in 7 days. | `server/auth` |
+| Passwords and sessions | Handled by Better Auth (hashed passwords, httpOnly sameSite cookies, secure in production). Minimum length 10. Session lasts 30 days from the last visit (sliding; `SessionKeepAlive` in the root layout triggers the refresh). | `server/auth` |
 | Brute force | Rate limit sign-in and sign-up by IP and by email (Better Auth built-in plus Upstash limit). Generic errors that do not reveal whether an email exists. | auth config, `server/security/rate-limit.ts` |
 | Authorization (IDOR) | Every edit and delete checks ownership in the query. Never trust an id sent from the client for who the author is. Take the user from the session. | every action |
 | Input validation | Zod on every server action and API route: type, length, allowed characters. Reject unknown fields. | `server/validators` |

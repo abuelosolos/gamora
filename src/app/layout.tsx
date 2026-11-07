@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geom, Poppins } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
+import { SessionKeepAlive } from "@/components/auth/session-keep-alive";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import { ToastProvider } from "@/components/ui/toast";
 import { clientEnv } from "@/lib/env.client";
@@ -57,6 +58,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider initialTheme={theme}>
           <ToastProvider>{children}</ToastProvider>
         </ThemeProvider>
+        <SessionKeepAlive />
       </body>
     </html>
   );
