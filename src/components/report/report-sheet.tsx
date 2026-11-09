@@ -4,7 +4,6 @@ import * as React from "react"
 import Link from "next/link"
 import { SealCheck } from "@/components/icons"
 import { Button } from "@/components/ui/button"
-import { chipVariants } from "@/components/ui/chip"
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
@@ -81,19 +80,6 @@ function ReportSheet({ open, onOpenChange, target, noun }: ReportSheetProps) {
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className="max-h-[90dvh]">
-        <div className="flex items-center justify-end px-5 pt-1">
-          {done ? null : (
-            <button
-              type="submit"
-              form="report-form"
-              disabled={!reason || pending}
-              className={chipVariants({ variant: "selected", className: "disabled:border-bgSurface disabled:bg-bgSurface" })}
-            >
-              {pending ? "Sending" : "Submit"}
-            </button>
-          )}
-        </div>
-
         {done ? (
           <div className="flex flex-col items-center gap-3 px-5 pt-4 pb-6 text-center">
             <SealCheck aria-hidden="true" className="size-18 text-statusSuccess" />
@@ -110,15 +96,15 @@ function ReportSheet({ open, onOpenChange, target, noun }: ReportSheetProps) {
               <SheetDescription>Only our team sees your report.</SheetDescription>
             </div>
 
-            <form id="report-form" onSubmit={submit} className="flex flex-col gap-4 overflow-y-auto pt-4 pb-4">
+            <form id="report-form" onSubmit={submit} className="flex flex-col gap-4 overflow-y-auto pt-4 pb-6">
               <fieldset className="flex flex-col gap-1 border-0 px-5 py-0">
                 <legend className="pb-1 text-body-sm font-medium text-textPrimary">Why are you reporting it?</legend>
                 {REPORT_REASONS.map((value) => (
                   <label
                     key={value}
                     className={cn(
-                      "flex min-h-11 cursor-pointer items-center gap-3 rounded-ui-sm border px-3 text-body-sm text-textPrimary has-focus-visible:ring-2 has-focus-visible:ring-accentDefault",
-                      reason === value ? "border-accentDefault bg-accentSubtle" : "border-borderDefault hover:bg-bgSurface"
+                      "flex min-h-11 cursor-pointer items-center gap-3 rounded-ui-sm px-3 text-body-sm text-textPrimary has-focus-visible:ring-2 has-focus-visible:ring-accentDefault",
+                      reason === value ? "bg-accentSubtle" : "hover:bg-bgSurface"
                     )}
                   >
                     <input
@@ -161,6 +147,12 @@ function ReportSheet({ open, onOpenChange, target, noun }: ReportSheetProps) {
                   ) : null}
                 </p>
               ) : null}
+
+              <div className="px-5 pt-1">
+                <Button type="submit" fullWidth loading={pending} disabled={!reason}>
+                  {pending ? "Sending" : "Submit"}
+                </Button>
+              </div>
             </form>
           </>
         )}
