@@ -2,15 +2,9 @@
 
 import * as React from "react"
 import { Apple, Google } from "@/components/icons"
-import { Button } from "@/components/ui/button"
+import { AUTH_BUTTON_CLASS, Button } from "@/components/ui/button"
 import { authClient } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
-
-/**
- * Every button on the auth screens shares this size: full width, 60px tall,
- * radius 24 (Figma ProfileButtons).
- */
-export const AUTH_BUTTON_CLASS = "h-15 min-h-15 w-full gap-1 rounded-ui-lg text-body"
 
 /** Sends the user to Google. Better Auth redirects back to /onboarding, which routes on. */
 function GoogleButton({ next, className }: { next: string; className?: string }) {

@@ -1,6 +1,6 @@
 import Link from "next/link"
-import { AppleButton, GoogleButton, AUTH_BUTTON_CLASS } from "@/components/auth/provider-buttons"
-import { Button } from "@/components/ui/button"
+import { AppleButton, GoogleButton } from "@/components/auth/provider-buttons"
+import { AUTH_BUTTON_CLASS, Button } from "@/components/ui/button"
 import { Logo } from "@/components/shared/logo"
 
 /**

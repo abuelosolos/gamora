@@ -93,4 +93,11 @@ function Button({
   )
 }
 
+/**
+ * Every button on the auth screens shares this size: full width, 60px tall,
+ * radius 24 (Figma ProfileButtons). Defined here (not in a "use client" file)
+ * so Server Components receive the string rather than a client reference proxy.
+ */
+export const AUTH_BUTTON_CLASS = "h-15 min-h-15 w-full gap-1 rounded-ui-lg text-body"
+
 export { Button, buttonVariants }

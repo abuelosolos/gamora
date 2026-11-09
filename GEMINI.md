@@ -14,7 +14,7 @@ Files in src/server start with import "server-only". Components never import fro
 npm run dev | lint | typecheck | build | db:generate | db:migrate | db:seed | icons
 
 ## Figma
-File: https://www.figma.com/design/m7Bqypb37d5YlsqgdH15N3/Gamora?t=KVmcQggBYq4twwNs-0. Read screens with the Figma MCP. Use the build-screen skill for screens and the build-component skill for components.
+Read screens with the Figma MCP. Use the build-screen skill for screens and the build-component skill for components.
 
 ## Hard rules
 1. Never read, print, edit or copy env files (.env, .env.local, .env.production). Use .env.example for variable names only. If a value is needed, ask the user.

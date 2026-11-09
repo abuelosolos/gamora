@@ -80,10 +80,12 @@ function ChatButton() {
 function ViewerAvatar({ viewer }: { viewer: TopNavbarViewer | null }) {
   if (!viewer) {
     return (
-      // Fixed 96 x 44 px so the bar never shifts; accent outline keeps the text accent on any theme.
-      <Button asChild size="xs" variant="outline-accent" className="h-11 w-24 px-0">
-        <Link href="/sign-in?next=/feed">Sign in</Link>
-      </Button>
+      <Link
+        href="/sign-in?next=/feed"
+        className="inline-flex h-11 items-center justify-center rounded-ui-md px-2 text-caption font-medium text-accentDefault outline-none focus-visible:ring-2 focus-visible:ring-accentDefault"
+      >
+        Sign in
+      </Link>
     )
   }
   return (
