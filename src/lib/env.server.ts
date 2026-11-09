@@ -1,11 +1,12 @@
 import "server-only";
 import { z } from "zod";
+import { clientEnv } from "@/lib/env.client";
 
 const schema = z.object({
   DATABASE_URL: z.string().url(),
-  DATABASE_URL_UNPOOLED: z.string().url(),
+  DATABASE_URL_UNPOOLED: z.string().url().optional(),
   BETTER_AUTH_SECRET: z.string().min(32),
-  BETTER_AUTH_URL: z.string().url(),
+  BETTER_AUTH_URL: z.string().url().default(clientEnv.NEXT_PUBLIC_APP_URL),
   GOOGLE_CLIENT_ID: z.string().min(1),
   GOOGLE_CLIENT_SECRET: z.string().min(1),
   BLOB_READ_WRITE_TOKEN: z.string().min(1),
@@ -14,4 +15,8 @@ const schema = z.object({
   ADMIN_EMAILS: z.string().default(""),
 });
 
-export const env = schema.parse(process.env);
+export const env = schema.parse({
+  ...process.env,
+  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL || clientEnv.NEXT_PUBLIC_APP_URL,
+  DATABASE_URL_UNPOOLED: process.env.DATABASE_URL_UNPOOLED || undefined,
+});
