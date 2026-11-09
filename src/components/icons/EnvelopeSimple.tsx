@@ -3,13 +3,17 @@ import type { SVGProps } from "react";
 const SvgEnvelopeSimple = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    fill="currentColor"
+    fill="none"
     viewBox="0 0 256 256"
     width="1em"
     height="1em"
     {...props}
   >
-    <path d="M224 48H32a8 8 0 0 0-8 8v136a16 16 0 0 0 16 16h176a16 16 0 0 0 16-16V56a8 8 0 0 0-8-8m-20.57 16L128 133.15 52.57 64ZM216 192H40V74.19l82.59 75.71a8 8 0 0 0 10.82 0L216 74.19z" />
+    <circle cx={128} cy={128} r={128} fill="#0A84FF" />
+    <path
+      fill="#FFF"
+      d="M68 80h120a12 12 0 0 1 12 12v72a12 12 0 0 1-12 12H68a12 12 0 0 1-12-12V92a12 12 0 0 1 12-12m0 16v4.62l60 42 60-42V96l-60 42z"
+    />
   </svg>
 );
 export default SvgEnvelopeSimple;

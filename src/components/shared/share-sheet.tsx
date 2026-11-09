@@ -2,11 +2,11 @@
 
 import * as React from "react"
 import {
-  ChatCircle,
   DotsThree,
   EnvelopeSimple,
   FacebookLogo,
   Link,
+  MessagesLogo,
   ShareNetwork,
   TelegramLogo,
   WhatsappLogo,
@@ -34,11 +34,12 @@ const ICONS: Record<ShareTarget["id"], React.ComponentType<React.ComponentProps<
   facebook: FacebookLogo,
   telegram: TelegramLogo,
   email: EnvelopeSimple,
-  messages: ChatCircle,
+  messages: MessagesLogo,
 }
 
 const tile =
   "flex min-h-11 flex-col items-center gap-1 rounded-ui-md py-1 text-caption text-textSecondary outline-none focus-visible:ring-2 focus-visible:ring-accentDefault"
+const appBadge = "flex size-11 items-center justify-center rounded-full [&_svg]:size-11"
 const disc = "flex size-11 items-center justify-center rounded-full bg-bgSurface text-textSecondary [&_svg]:size-5"
 
 export interface ShareSheetProps {
@@ -107,7 +108,7 @@ function ShareSheet({ path, title, text, children }: ShareSheetProps) {
                   onClick={() => setOpen(false)}
                   className={tile}
                 >
-                  <span className={disc}>
+                  <span className={appBadge}>
                     <Icon aria-hidden="true" />
                   </span>
                   {target.label}

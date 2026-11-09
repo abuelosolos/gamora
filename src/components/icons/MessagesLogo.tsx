@@ -1,0 +1,19 @@
+import * as React from "react";
+import type { SVGProps } from "react";
+const SvgMessagesLogo = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 256 256"
+    width="1em"
+    height="1em"
+    {...props}
+  >
+    <circle cx={128} cy={128} r={128} fill="#34C759" />
+    <path
+      fill="#FFF"
+      d="M128 64c-41.97 0-76 26.86-76 60 0 15.65 7.59 29.9 20.02 40.58-1.67 10.17-6.64 20.23-11.27 25.42-1.85 2.07-.18 5.36 2.58 4.98 12.69-1.73 25.92-6.89 34.81-13.11 9.27 2.68 19.34 4.13 29.86 4.13 41.97 0 76-26.86 76-60s-34.03-62-76-62"
+    />
+  </svg>
+);
+export default SvgMessagesLogo;

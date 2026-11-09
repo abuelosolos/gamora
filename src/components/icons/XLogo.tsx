@@ -3,13 +3,24 @@ import type { SVGProps } from "react";
 const SvgXLogo = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    fill="currentColor"
+    fill="none"
     viewBox="0 0 256 256"
     width="1em"
     height="1em"
     {...props}
   >
-    <path d="m214.75 211.71-62.6-98.38 61.77-67.95a8 8 0 0 0-11.84-10.76l-58.84 64.72-40.49-63.63A8 8 0 0 0 96 32H48a8 8 0 0 0-6.75 12.3l62.6 98.37-61.77 68a8 8 0 1 0 11.84 10.76l58.84-64.72 40.49 63.63A8 8 0 0 0 160 224h48a8 8 0 0 0 6.75-12.29M164.39 208 62.57 48h29l101.86 160Z" />
+    <circle
+      cx={128}
+      cy={128}
+      r={124}
+      fill="#000"
+      stroke="#2F3336"
+      strokeWidth={8}
+    />
+    <path
+      fill="#FFF"
+      d="M142.26 117.62 193.83 58h-12.22l-44.78 51.76L101.07 58H59.82l54.08 78.34L59.82 198h12.22l47.29-54.66L157.11 198h41.25zm-16.74 19.35-5.48-7.8-43.58-62.04h18.77l35.19 50.11 5.48 7.8 45.74 65.11h-18.77z"
+    />
   </svg>
 );
 export default SvgXLogo;

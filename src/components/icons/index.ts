@@ -46,6 +46,7 @@ export { default as Key } from "./Key";
 export { default as LinkSimple } from "./LinkSimple";
 export { default as Link } from "./Link";
 export { default as MagnifyingGlass } from "./MagnifyingGlass";
+export { default as MessagesLogo } from "./MessagesLogo";
 export { default as MetaMask } from "./MetaMask";
 export { default as Microphone } from "./Microphone";
 export { default as PaintBrush } from "./PaintBrush";

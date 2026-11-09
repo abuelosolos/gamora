@@ -3,13 +3,17 @@ import type { SVGProps } from "react";
 const SvgFacebookLogo = (props: SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    fill="currentColor"
+    fill="none"
     viewBox="0 0 256 256"
     width="1em"
     height="1em"
     {...props}
   >
-    <path d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24m8 191.63V152h24a8 8 0 0 0 0-16h-24v-24a16 16 0 0 1 16-16h16a8 8 0 0 0 0-16h-16a32 32 0 0 0-32 32v24H96a8 8 0 0 0 0 16h24v63.63a88 88 0 1 1 16 0" />
+    <circle cx={128} cy={128} r={128} fill="#1877F2" />
+    <path
+      fill="#FFF"
+      d="M177.82 165.09 183.5 128h-35.59v-24.07c0-10.15 4.97-20.04 20.91-20.04H185V52.31s-14.68-2.51-28.72-2.51c-29.31 0-48.47 17.76-48.47 49.92V128H75.22v37.09h32.59v89.67a129.4 129.4 0 0 0 40.1 0v-89.67z"
+    />
   </svg>
 );
 export default SvgFacebookLogo;
