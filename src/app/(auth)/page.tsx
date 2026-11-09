@@ -1,6 +1,5 @@
 import Link from "next/link"
 import { AppleButton, GoogleButton, AUTH_BUTTON_CLASS } from "@/components/auth/provider-buttons"
-import { PortfolioNote } from "@/components/auth/portfolio-note"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/shared/logo"
 
@@ -38,7 +37,6 @@ export default function WelcomePage() {
           >
             Browse first
           </Link>
-          <PortfolioNote />
         </div>
       </div>
       <nav
